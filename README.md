@@ -106,9 +106,9 @@ The download starts in the background when the firmware is missing. Install then
 
 [patjak/facetimehd-firmware](https://github.com/patjak/facetimehd-firmware)
 
-### Private repositories
+### Clones
 
-Until these repositories are public, a plain `git clone` fails for anyone who cannot see them. If you can, `gh auth login` is enough. The program tries `gh repo clone` when `git clone` fails.
+The repositories are public. A plain `git clone` is enough. If that fails, the program tries `gh repo clone`.
 
 Each fix is pinned to a reviewed commit. The program does not follow a branch tip.
 
