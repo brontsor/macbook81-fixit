@@ -28,9 +28,14 @@ The first screen is a scan. Each row is one fix, with a status.
 - Space marks a row
 - `a` installs the marked rows
 - `x` removes the marked rows
+- `u` reads the boot image
 - `q` quits
 
-It asks before it writes. After an install, reboot yourself, then run it again and look at the scan.
+The boot image is the file this machine starts from. The keyboard and sleep settings live in it. Reading it asks for your password. The border is yellow and moving until that read succeeds.
+
+Each row has a license column. `i` shows the license link.
+
+It asks before it writes. If a change rebuilt the boot image, it tells you to reboot by hand, and asks if it should reboot now. It reboots only if you say yes. Then run it again and look at the scan.
 
 ## What it installs
 
@@ -89,7 +94,7 @@ Two boot fixes, the keyboard and the sleep default, live in the boot image. Read
 
 ### Reboot and the boot image
 
-This machine boots a Limine UKI. If an install changes a boot file, the program rebuilds that image once, with `limine-mkinitcpio`, after the other writes. It does not run `limine-update`. It does not reboot.
+This machine boots a Limine UKI, which is the boot image. If an install changes a boot file, the program rebuilds that image once, with `limine-mkinitcpio`, after the other writes. It does not run `limine-update`. It then asks if you want to reboot. It reboots only if you say yes. You can always reboot by hand instead.
 
 ### Webcam firmware
 

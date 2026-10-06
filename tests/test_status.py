@@ -33,6 +33,7 @@ class Fake:
         self.mem_sleep = "s2idle [deep]"
         self._home = "/home/owner"
         self.foreign = []
+        self.module = ""
 
     def read(self, path):
         return self.files.get(path)
@@ -64,6 +65,9 @@ class Fake:
     def home(self):
         return self._home
 
+    def module_path(self, name):
+        return getattr(self, "module", "")
+
     def foreign_sleep(self):
         return getattr(self, "foreign", [])
 
@@ -82,6 +86,19 @@ class TestKeyboardStatus(unittest.TestCase):
         probe.uki = "quiet initcall_blacklist=dw_pci_driver_init"
         report = keyboard_status(probe)
         self.assertEqual(report.status, "installed")
+
+    def test_added_obsolete_driver_is_a_leftover_not_the_fix(self):
+        probe = Fake()
+        probe.files[DROPIN] = "token\n"
+        probe.uki = "quiet initcall_blacklist=dw_pci_driver_init"
+        probe.dkms = "macbook12-spi-driver/0+git.315: added\n"
+        probe.module = "/lib/modules/7.2.5-4-omarchy/kernel/drivers/input/keyboard/applespi.ko.zst"
+        report = keyboard_status(probe)
+        self.assertEqual(report.status, "installed")
+        self.assertIn("not installed", report.note)
+        self.assertIn("in-tree applespi", report.note)
+        self.assertNotIn("present and unrelated", report.note)
+        self.assertIn("will not remove", report.note)
 
 
 class TestAudioStatus(unittest.TestCase):

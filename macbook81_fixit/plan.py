@@ -53,7 +53,7 @@ def plan_apply(selected, probe):
             if name in BOOT and _wrote(chunk):
                 boot_write = True
     if boot_write:
-        steps.append(Step(["limine-mkinitcpio"], sudo=True, detail="one UKI rebuild"))
+        steps.append(Step(["limine-mkinitcpio"], sudo=True, detail="one boot image rebuild"))
     steps.extend(tail)
     return steps
 
@@ -73,7 +73,7 @@ def plan_remove(selected, probe):
             if name in BOOT and _wrote(chunk):
                 boot_write = True
     if boot_write:
-        steps.append(Step(["limine-mkinitcpio"], sudo=True, detail="one UKI rebuild"))
+        steps.append(Step(["limine-mkinitcpio"], sudo=True, detail="one boot image rebuild"))
     steps.extend(tail)
     return steps
 

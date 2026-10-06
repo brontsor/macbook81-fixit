@@ -1,13 +1,17 @@
 # macbook81-fixit
 
 Python 3, standard library, curses. No pip package. The owner runs it.
-It asks for sudo. It does not reboot.
+It asks for sudo. After a boot-image rebuild it offers a reboot, and
+reboots only if you say yes.
 
 - Match `product_name` `MacBook8,1` only. Do not match on `Crb`.
 - A refused host writes nothing. `--check` writes nothing, including no
   firmware download.
 - Status comes from the live system. The action log is not the status.
-- Do not read a serial, a board serial, or a battery date.
+- The screen may read the serial to show age. Do not log it, print it,
+  or put it in `--check`. Do not read a board serial or a battery date.
+- `macbook12-spi-driver` at DKMS `added` is not installed. Say so.
+  Do not call it the keyboard fix. Do not remove it unless asked.
 - Pins live in `catalog.py`. Do not float them to a branch tip.
 - One `limine-mkinitcpio` after the writes. Never `limine-update`.
 - Do not write `/sys/power/mem_sleep`.

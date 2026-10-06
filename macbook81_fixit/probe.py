@@ -87,6 +87,34 @@ class SystemProbe:
     def cmdline_has(self, token):
         return token in _read("/proc/cmdline")
 
+    def module_path(self, name):
+        code, out = _run(["modinfo", "-n", name])
+        return out.strip() if code == 0 else ""
+
+    def laptop_age(self, today):
+        from macbook81_fixit.age import format_age, manufacture_date
+
+        serial = self._product_serial()
+        if serial is None:
+            return "password"
+        built = manufacture_date(serial)
+        if not built:
+            return "unknown"
+        return format_age(built, today) or "unknown"
+
+    def _product_serial(self):
+        path = "/sys/class/dmi/id/product_serial"
+        text = _read(path).strip()
+        if _usable_serial(text):
+            return text
+        if os.path.exists(path) and not os.access(path, os.R_OK):
+            if _run(["sudo", "-n", "true"])[0] != 0:
+                return None
+            code, out = _run(["sudo", "-n", "cat", path])
+            text = out.strip() if code == 0 else ""
+            return text if _usable_serial(text) else ""
+        return ""
+
     def foreign_sleep(self):
         from macbook81_fixit.status import GIST_HOOKS, foreign_from_listing
 
@@ -119,6 +147,19 @@ class SystemProbe:
         return parts[1] if len(parts) > 1 else ""
 
 
+def _usable_serial(text):
+    lowered = text.strip().lower()
+    if not lowered:
+        return False
+    return lowered not in {
+        "none",
+        "not specified",
+        "default string",
+        "to be filled by o.e.m.",
+        "system serial number",
+    }
+
+
 def _read(path):
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
@@ -139,10 +180,10 @@ def _uki_state():
     if os.path.isfile(UKI) and os.access(UKI, os.R_OK):
         return _run(["strings", UKI])[1], ""
     if _run(["sudo", "-n", "true"])[0] != 0:
-        return "", "the UKI is not readable without sudo"
+        return "", "the boot image is not readable without a password"
     if _run(["sudo", "-n", "test", "-f", UKI])[0] != 0:
-        return "", f"UKI missing: {UKI}"
+        return "", f"boot image missing: {UKI}"
     code, out = _run(["sudo", "-n", "strings", UKI])
     if code == 0:
         return out, ""
-    return "", "the UKI is not readable without sudo"
+    return "", "the boot image is not readable without a password"

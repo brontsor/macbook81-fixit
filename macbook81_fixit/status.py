@@ -41,6 +41,45 @@ def _dkms_installed(text, package, version, kernel):
     return False
 
 
+def _obsolete_spi_note(probe):
+    text = probe.dkms_status()
+    kernel = probe.kernel_release()
+    installed = broken = added = False
+    for line in text.splitlines():
+        if not line.startswith("macbook12-spi-driver/"):
+            continue
+        tail = line.split(":")[-1].strip().lower()
+        if kernel in line and tail.startswith("installed"):
+            installed = True
+        elif tail.startswith("broken"):
+            broken = True
+        elif tail.startswith("added"):
+            added = True
+    if not (installed or broken or added):
+        return ""
+    path = ""
+    fn = getattr(probe, "module_path", None)
+    if fn:
+        path = fn("applespi") or ""
+    if installed:
+        return (
+            "macbook12-spi-driver is installed for this kernel. "
+            "It is not the keyboard fix. This program will not remove it."
+        )
+    if broken:
+        return (
+            "macbook12-spi-driver is broken in DKMS. "
+            "It is not the keyboard fix. This program will not remove it."
+        )
+    loaded = "The running driver is in-tree applespi. " if path and "updates/dkms" not in path else ""
+    return (
+        "macbook12-spi-driver is only registered with DKMS, not installed. "
+        + loaded
+        + "The fix is the boot-image parameter. This leftover is not that fix. "
+        "This program will not remove it."
+    )
+
+
 def _restarts_wireplumber(text):
     for line in text.splitlines():
         code = line.split("#", 1)[0].lower()
@@ -57,9 +96,7 @@ def _profile_paths(probe):
 
 
 def keyboard_status(probe):
-    note = ""
-    if any(line.startswith("macbook12-spi-driver") for line in probe.dkms_status().splitlines()):
-        note = "macbook12-spi-driver is present and unrelated. This program will not remove it."
+    note = _obsolete_spi_note(probe)
     present = probe.exists(DROPIN)
     in_uki = probe.uki_has(TOKEN)
     err = _uki_error(probe)
@@ -77,7 +114,7 @@ def keyboard_status(probe):
     if present and not in_uki:
         return Report(
             "partial",
-            f"the drop-in is on disk but the UKI does not contain {TOKEN}",
+            f"the drop-in is on disk but the boot image does not contain {TOKEN}",
             note,
         )
     return Report("not-installed", "", note)
