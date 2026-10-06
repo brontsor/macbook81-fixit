@@ -10,6 +10,10 @@ def execute(steps, run, log=None):
             if log is not None:
                 log.record("wait", step.detail)
             return Result(False, step.detail)
+        if step.kind == "skip":
+            if log is not None:
+                log.record("skip", step.detail)
+            continue
         rc = run(step)
         if log is not None:
             log.record("run" if rc == 0 else "fail", " ".join(step.argv) or step.detail)

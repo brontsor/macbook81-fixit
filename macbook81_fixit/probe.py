@@ -87,6 +87,25 @@ class SystemProbe:
     def cmdline_has(self, token):
         return token in _read("/proc/cmdline")
 
+    def foreign_sleep(self):
+        from macbook81_fixit.status import GIST_HOOKS, foreign_from_listing
+
+        entries = []
+        for directory in ("/etc/limine-entry-tool.d", "/etc/systemd/sleep.conf.d"):
+            try:
+                names = sorted(os.listdir(directory))
+            except OSError:
+                continue
+            for name in names:
+                path = os.path.join(directory, name)
+                entries.append((path, self.read(path)))
+        entries.append(("/etc/default/limine", self.read("/etc/default/limine")))
+        entries.append(("/etc/systemd/sleep.conf", self.read("/etc/systemd/sleep.conf")))
+        for path in sorted(GIST_HOOKS):
+            if self.exists(path):
+                entries.append((path, None))
+        return foreign_from_listing(entries)
+
     def _uki_state(self):
         if not hasattr(self, "_uki_cache"):
             self._uki_cache = _uki_state()

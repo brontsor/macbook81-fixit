@@ -58,6 +58,8 @@ Deep sleep on this machine can resume with a dead keyboard. This makes light sle
 
 [macbook81-s2idle-default](https://github.com/brontsor/macbook81-s2idle-default)
 
+If the machine already has another sleep workaround, this row says blocked and the program will not install ours beside it. It also will not overwrite a keyboard drop-in that already carries the sleep setting. That is the shape in [omacom/omarchy#9735](https://github.com/omacom/omarchy/pull/9735), which is still open: the keyboard parameter and `mem_sleep_default=s2idle` on one line, in the same file we use for the keyboard. The hibernate hooks and the suspend detach hook are not in that pull request. They are in the [gist it cites](https://gist.github.com/matthiasjg/78aaf7802146f0b89be3da9e4feb111f). Those are a later sleep and hibernate patch, not this one. If they are already installed, this row stays blocked.
+
 ### Webcam
 
 The FaceTime camera is not a USB webcam. This installs patjak's driver and downloads the firmware from Apple. The firmware is not in our repositories.

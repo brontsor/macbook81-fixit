@@ -63,6 +63,10 @@ def keyboard_status(probe):
     present = probe.exists(DROPIN)
     in_uki = probe.uki_has(TOKEN)
     err = _uki_error(probe)
+    text = probe.read(DROPIN) or ""
+    if sets_mem_sleep(text):
+        extra = "This drop-in also sets mem_sleep_default. It will not be replaced."
+        note = (note + " " + extra).strip() if note else extra
     if present and in_uki:
         return Report("installed", TOKEN, note)
     if present and err:
@@ -124,6 +128,9 @@ def speaker_status(probe):
 
 
 def sleep_status(probe):
+    foreign = _foreign_sleep(probe)
+    if foreign:
+        return Report("blocked", foreign_detail(foreign), SLEEP_NOTE)
     limine = probe.exists(SLEEP_LIMINE)
     systemd = probe.exists(SLEEP_SYSTEMD)
     uki = probe.uki_has(SLEEP_TOKEN)
@@ -139,6 +146,89 @@ def sleep_status(probe):
     if limine or systemd or uki:
         return Report("partial", "the s2idle default is only partly installed", SLEEP_NOTE)
     return Report("not-installed", "", SLEEP_NOTE)
+
+
+def _foreign_sleep(probe):
+    fn = getattr(probe, "foreign_sleep", None)
+    return list(fn()) if fn else []
+
+
+def foreign_detail(paths):
+    path = paths[0]
+    name = path.rsplit("/", 1)[-1]
+    if name == "macbook81-spi-pio.conf":
+        lead = (
+            "omacom/omarchy#9735 already sets mem_sleep_default=s2idle in "
+            + path
+            + "."
+        )
+    elif name == "macbook81-spi-fix.conf":
+        lead = (
+            path
+            + " is the matthiasjg gist. It sets mem_sleep_default=s2idle and "
+            "installs hibernate hooks this program does not."
+        )
+    elif name == "macbook81-applespi":
+        lead = "The gist suspend hook is installed at " + path + "."
+    elif name == "macbook81-spi-detach":
+        lead = "The gist hibernate detach hook is installed at " + path + "."
+    elif name == "10-macbook-hibernate.conf":
+        lead = path + " sets a hibernate mode. This program does not install hibernate."
+    elif path == "/etc/default/limine":
+        lead = "/etc/default/limine already sets mem_sleep_default."
+    else:
+        lead = path + " is already a sleep workaround."
+    more = ""
+    if len(paths) > 1:
+        more = " Also present: " + ", ".join(paths[1:]) + "."
+    return lead + more + " This program will not install its sleep default beside that."
+
+
+OUR_SLEEP = {
+    "/etc/limine-entry-tool.d/macbook81-s2idle.conf",
+    "/etc/systemd/sleep.conf.d/macbook81-s2idle.conf",
+}
+GIST_HOOKS = {
+    "/usr/lib/systemd/system-sleep/macbook81-applespi",
+    "/etc/initcpio/hooks/macbook81-spi-detach",
+    "/etc/systemd/system/macbook81-applespi-rebind.service",
+    "/etc/systemd/system/macbook81-applespi-ensure.service",
+}
+
+
+def foreign_from_listing(entries):
+    found = []
+    for path, text in entries:
+        if path in OUR_SLEEP:
+            continue
+        if path in GIST_HOOKS:
+            found.append(path)
+            continue
+        if text and _sets_foreign_sleep(path, text):
+            found.append(path)
+    return found
+
+
+def _sets_foreign_sleep(path, text):
+    active = _active(text)
+    if path == "/etc/default/limine" or path.startswith("/etc/limine-entry-tool.d/"):
+        return "mem_sleep_default=" in active
+    if path == "/etc/systemd/sleep.conf" or path.startswith("/etc/systemd/sleep.conf.d/"):
+        return "MemorySleepMode=" in active or "HibernateMode=" in active
+    return False
+
+
+def sets_mem_sleep(text):
+    return "mem_sleep_default=" in _active(text or "")
+
+
+def _active(text):
+    lines = []
+    for line in text.splitlines():
+        code = line.split("#", 1)[0].strip()
+        if code:
+            lines.append(code)
+    return "\n".join(lines)
 
 
 def _uki_error(probe):

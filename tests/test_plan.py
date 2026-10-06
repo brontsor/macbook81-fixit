@@ -1,6 +1,7 @@
 import unittest
 
 from macbook81_fixit.plan import plan_apply
+from macbook81_fixit.status import DROPIN
 from macbook81_fixit import catalog
 
 
@@ -8,15 +9,22 @@ class Fake:
     def __init__(self):
         self._playing = False
         self.files = {}
+        self.foreign = []
 
     def home(self):
         return "/home/owner"
+
+    def foreign_sleep(self):
+        return getattr(self, "foreign", [])
 
     def playing(self):
         return self._playing
 
     def exists(self, path):
         return path in self.files
+
+    def read(self, path):
+        return self.files.get(path)
 
     def kernel_release(self):
         return "7.2.5-4-omarchy"
@@ -60,6 +68,27 @@ class TestPlan(unittest.TestCase):
         self.assertIn(catalog.PIN["audio"], blob)
         self.assertIn(catalog.PIN["speaker"], blob)
         self.assertIn(catalog.PIN["sleep"], blob)
+
+    def test_a_foreign_sleep_workaround_is_not_installed_over(self):
+        probe = Fake()
+        probe.foreign = ["/etc/limine-entry-tool.d/macbook81-spi-pio.conf"]
+        steps = plan_apply(["sleep"], probe)
+        blob = " ".join(" ".join(step.argv) for step in steps)
+        self.assertNotIn("macbook81-s2idle.conf", blob)
+        self.assertNotIn("limine-mkinitcpio", blob)
+        self.assertTrue(any(step.kind == "skip" for step in steps))
+
+    def test_keyboard_apply_does_not_replace_a_dropin_that_also_sets_sleep(self):
+        probe = Fake()
+        probe.files["/etc/mkinitcpio.conf.d/macbook_spi_modules.conf"] = "MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\n"
+        probe.files[DROPIN] = (
+            'KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init'
+            ' mem_sleep_default=s2idle"\n'
+        )
+        steps = plan_apply(["keyboard"], probe)
+        blob = " ".join(" ".join(step.argv) for step in steps)
+        self.assertNotIn(DROPIN, blob)
+        self.assertNotIn("limine-mkinitcpio", blob)
 
     def test_firmware_url_is_the_apple_10126_combo(self):
         self.assertEqual(

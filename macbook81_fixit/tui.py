@@ -115,6 +115,9 @@ class _App:
             self.message = "nothing marked"
             return
         steps = plan_apply(names, self.probe) if mode == "apply" else plan_remove(names, self.probe)
+        if steps and all(step.kind == "skip" for step in steps):
+            self.message = steps[0].detail
+            return
         curses.def_prog_mode()
         curses.endwin()
         try:

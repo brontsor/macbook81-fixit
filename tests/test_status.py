@@ -2,6 +2,7 @@ import unittest
 
 from macbook81_fixit.status import (
     audio_status,
+    foreign_from_listing,
     keyboard_status,
     sleep_status,
     speaker_status,
@@ -31,6 +32,7 @@ class Fake:
         self.nicks = ""
         self.mem_sleep = "s2idle [deep]"
         self._home = "/home/owner"
+        self.foreign = []
 
     def read(self, path):
         return self.files.get(path)
@@ -61,6 +63,9 @@ class Fake:
 
     def home(self):
         return self._home
+
+    def foreign_sleep(self):
+        return getattr(self, "foreign", [])
 
 
 class TestKeyboardStatus(unittest.TestCase):
@@ -138,6 +143,50 @@ class TestSleepStatus(unittest.TestCase):
         report = sleep_status(probe)
         self.assertEqual(report.status, "installed")
         self.assertIn("not a sleep fix", report.note.lower())
+
+    def test_omarchy_combined_dropin_blocks_our_sleep_default(self):
+        probe = Fake()
+        probe.foreign = ["/etc/limine-entry-tool.d/macbook81-spi-pio.conf"]
+        report = sleep_status(probe)
+        self.assertEqual(report.status, "blocked")
+        self.assertIn("macbook81-spi-pio.conf", report.detail)
+        self.assertIn("will not install", report.detail)
+
+    def test_gist_suspend_hook_blocks_our_sleep_default(self):
+        probe = Fake()
+        probe.foreign = ["/usr/lib/systemd/system-sleep/macbook81-applespi"]
+        report = sleep_status(probe)
+        self.assertEqual(report.status, "blocked")
+        self.assertIn("macbook81-applespi", report.detail)
+        self.assertIn("will not install", report.detail)
+
+
+class TestForeignSleepListing(unittest.TestCase):
+    def test_our_files_and_a_keyboard_only_dropin_are_not_foreign(self):
+        entries = [
+            ("/etc/limine-entry-tool.d/macbook81-s2idle.conf", "mem_sleep_default=s2idle\n"),
+            ("/etc/systemd/sleep.conf.d/macbook81-s2idle.conf", "MemorySleepMode=s2idle\n"),
+            (
+                "/etc/limine-entry-tool.d/macbook81-spi-pio.conf",
+                "initcall_blacklist=dw_pci_driver_init\n",
+            ),
+        ]
+        self.assertEqual(foreign_from_listing(entries), [])
+
+    def test_a_combined_keyboard_dropin_is_foreign(self):
+        path = "/etc/limine-entry-tool.d/macbook81-spi-pio.conf"
+        text = (
+            'KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init'
+            ' mem_sleep_default=s2idle"\n'
+        )
+        self.assertEqual(foreign_from_listing([(path, text)]), [path])
+
+    def test_commented_stock_sleep_conf_is_not_foreign(self):
+        text = "[Sleep]\n#MemorySleepMode=\n#HibernateMode=platform shutdown\n"
+        self.assertEqual(
+            foreign_from_listing([("/etc/systemd/sleep.conf", text)]),
+            [],
+        )
 
 
 class TestWebcamStatus(unittest.TestCase):

@@ -5,6 +5,8 @@ from macbook81_fixit.status import (
     JACK_UNIT,
     SLEEP_LIMINE,
     SLEEP_SYSTEMD,
+    foreign_detail,
+    sets_mem_sleep,
 )
 
 
@@ -38,6 +40,7 @@ def _pin(probe, name):
 def plan_apply(selected, probe):
     steps = []
     tail = []
+    boot_write = False
     for name in selected:
         if name == "speaker":
             dest = _src(probe, "speaker")
@@ -45,8 +48,11 @@ def plan_apply(selected, probe):
             steps.append(Step(["bash", "apply.sh"], cwd=dest))
             tail = _wireplumber_tail(probe)
         else:
-            steps.extend(_apply_one(name, probe))
-    if any(name in BOOT for name in selected):
+            chunk = _apply_one(name, probe)
+            steps.extend(chunk)
+            if name in BOOT and _wrote(chunk):
+                boot_write = True
+    if boot_write:
         steps.append(Step(["limine-mkinitcpio"], sudo=True, detail="one UKI rebuild"))
     steps.extend(tail)
     return steps
@@ -55,17 +61,25 @@ def plan_apply(selected, probe):
 def plan_remove(selected, probe):
     steps = []
     tail = []
+    boot_write = False
     for name in selected:
         if name == "speaker":
             dest = _src(probe, "speaker")
             steps.append(Step(["bash", "revert.sh"], cwd=dest))
             tail = _wireplumber_tail(probe)
         else:
-            steps.extend(_remove_one(name, probe))
-    if any(name in BOOT for name in selected):
+            chunk = _remove_one(name, probe)
+            steps.extend(chunk)
+            if name in BOOT and _wrote(chunk):
+                boot_write = True
+    if boot_write:
         steps.append(Step(["limine-mkinitcpio"], sudo=True, detail="one UKI rebuild"))
     steps.extend(tail)
     return steps
+
+
+def _wrote(steps):
+    return any(step.kind != "skip" and step.argv for step in steps)
 
 
 def _wireplumber_tail(probe):
@@ -76,6 +90,17 @@ def _wireplumber_tail(probe):
 
 def _apply_one(name, probe):
     if name == "keyboard":
+        text = _read(probe, DROPIN)
+        if sets_mem_sleep(text):
+            return [Step(
+                [],
+                kind="skip",
+                detail=(
+                    DROPIN
+                    + " also sets mem_sleep_default. "
+                    "It will not be replaced."
+                ),
+            )]
         dest = _src(probe, "keyboard")
         steps = _pin(probe, "keyboard")
         steps.append(Step(
@@ -92,6 +117,9 @@ def _apply_one(name, probe):
             ))
         return steps
     if name == "sleep":
+        foreign = _foreign(probe)
+        if foreign:
+            return [Step([], kind="skip", detail=foreign_detail(foreign))]
         dest = _src(probe, "sleep")
         steps = _pin(probe, "sleep")
         steps.append(Step(
@@ -142,6 +170,13 @@ def _apply_one(name, probe):
 
 def _remove_one(name, probe):
     if name == "keyboard":
+        text = _read(probe, DROPIN)
+        if sets_mem_sleep(text):
+            return [Step(
+                [],
+                kind="skip",
+                detail=DROPIN + " also sets mem_sleep_default. It was not removed.",
+            )]
         return [Step(["rm", "-f", DROPIN], sudo=True)]
     if name == "sleep":
         return [
@@ -165,3 +200,15 @@ def _remove_one(name, probe):
             Step(["rm", "-rf", "/usr/lib/firmware/facetimehd"], sudo=True),
         ]
     raise ValueError(name)
+
+
+def _read(probe, path):
+    read = getattr(probe, "read", None)
+    if not read:
+        return ""
+    return read(path) or ""
+
+
+def _foreign(probe):
+    fn = getattr(probe, "foreign_sleep", None)
+    return list(fn()) if fn else []
