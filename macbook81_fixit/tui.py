@@ -1,8 +1,10 @@
 import curses
+import subprocess
 import time
 from datetime import date
 
 from macbook81_fixit import catalog
+from macbook81_fixit.age import computer_status
 from macbook81_fixit.deps import missing
 from macbook81_fixit.execute import execute
 from macbook81_fixit.firmware import state as firmware_state
@@ -15,8 +17,8 @@ TOKEN = "initcall_blacklist=dw_pci_driver_init"
 SLEEP_TOKEN = "mem_sleep_default=s2idle"
 
 HELP = (
-    "j/k move   space mark   a apply   x remove   i license   s scan   q quit",
-    "u reads the boot image. That is the file this machine starts from.",
+    "j/k move   space mark   a apply   x remove   s scan   q quit",
+    "u authenticates as root, then reads the boot image. That is the file this machine starts from.",
 )
 
 
@@ -38,7 +40,7 @@ class _App:
         self.cursor = 0
         self.marked = set()
         self.message = ""
-        self.tick = 0
+        self.auth_line = ""
         self.age_at = 0
         self.age_label = ""
         self.rescan()
@@ -51,13 +53,23 @@ class _App:
         self._refresh_age(force=True)
 
     def loop(self):
+        self.stdscr.timeout(5000)
+        dirty = True
         while True:
-            self.tick += 1
-            self.draw()
+            if dirty:
+                self.draw()
+                dirty = False
             key = self.stdscr.getch()
             if key == -1:
+                before = self.age_label
                 self._refresh_age()
+                dirty = self.age_label != before
                 continue
+            if key == curses.KEY_RESIZE:
+                dirty = True
+                continue
+            self.auth_line = ""
+            dirty = True
             if key in (ord("q"), ord("Q")):
                 return
             if key in (curses.KEY_UP, ord("k")):
@@ -79,8 +91,6 @@ class _App:
             elif key in (ord("s"), ord("S")):
                 self.rescan()
                 self.message = "scanned"
-            elif key in (ord("i"), ord("I")):
-                self._license()
             elif key in (ord("d"), ord("D")) and self.deps:
                 self._install_deps()
 
@@ -88,12 +98,12 @@ class _App:
         self.stdscr.erase()
         height, width = self.stdscr.getmaxyx()
         state = boot_image_state(self.probe)
-        _frame(self.stdscr, state, self.tick)
+        _frame(self.stdscr, state)
         if height < 22 or width < 76:
             self.stdscr.addnstr(2, 2, "Terminal too small. Need 76 columns and 22 rows.", max(0, width - 4))
             self.stdscr.refresh()
             return
-        y = _banner(self.stdscr, width, self.probe.kernel_release())
+        y = _banner(self.stdscr, width, self.probe.kernel_release(), self.age_label)
         if self.deps:
             self.stdscr.addnstr(y, 2, "missing: " + ", ".join(self.deps) + "   [d] install", width - 4)
             y += 1
@@ -108,22 +118,26 @@ class _App:
             self.stdscr.addnstr(y, 2, line, width - 4, attr)
             y += 1
         y += 1
-        _name, title, report = self.rows[self.cursor]
-        floor = height - 5
+        name, title, report = self.rows[self.cursor]
+        field, hint_row = prompt_rows(height)
+        floor = field
         if y < floor:
             self.stdscr.addnstr(y, 2, title, width - 4, curses.A_BOLD)
             y += 1
-        for text in (report.detail, report.note, self._extra(), self._boot_note()):
+        for text in (license_line(name), report.detail, report.note, self._extra(), self._boot_note()):
             if not text or y >= floor:
                 break
             self.stdscr.addnstr(y, 2, text, width - 4)
             y += 1
-        status = _status_line(state, self.age_label)
-        self.stdscr.addnstr(height - 4, 2, status, width - 4, _pair(_frame_color(state)) | curses.A_BOLD)
+        status = _status_line(state)
+        self.stdscr.addnstr(height - 4, 2, status, width - 4, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
         self.stdscr.addnstr(height - 3, 2, HELP[0], width - 4, _pair(4))
         self.stdscr.addnstr(height - 2, 2, HELP[1], width - 4, _pair(4))
-        if self.message and y < height - 4:
+        if self.message and y < field:
             self.stdscr.addnstr(y, 2, self.message, width - 4)
+        if self.auth_line:
+            self.stdscr.addnstr(field, 2, self.auth_line, width - 4, _pair(3) | curses.A_BOLD)
+            self.stdscr.addnstr(hint_row, 2, " " * max(0, width - 4), width - 4)
         self.stdscr.refresh()
 
     def _boot_note(self):
@@ -132,7 +146,7 @@ class _App:
             return ""
         return (
             "Keyboard and sleep live in the boot image. "
-            "Press u to read it. A change there waits for a reboot."
+            "Press u to authenticate as root and read it. A change there waits for a reboot."
         )
 
     def _extra(self):
@@ -150,12 +164,7 @@ class _App:
             self.age_label = ""
             return
         state = fn(date.today())
-        if state == "password":
-            self.age_label = "Age needs a password (u)"
-        elif state == "unknown":
-            self.age_label = "Age unknown"
-        else:
-            self.age_label = "Age " + state
+        self.age_label = computer_status(state)
 
     def _act(self, mode):
         names = [name for name in ORDER if name in self.marked]
@@ -165,6 +174,8 @@ class _App:
         steps = plan_apply(names, self.probe) if mode == "apply" else plan_remove(names, self.probe)
         if steps and all(step.kind == "skip" for step in steps):
             self.message = steps[0].detail
+            return
+        if any(step.sudo for step in steps) and not self._ensure_root():
             return
         curses.def_prog_mode()
         curses.endwin()
@@ -222,26 +233,16 @@ class _App:
         self.message = "rebooting"
 
     def _read_boot_image(self):
-        import subprocess
-        curses.def_prog_mode()
-        curses.endwin()
-        try:
-            print("Reading the boot image needs your password.")
-            print("The boot image is the file this machine starts from.")
-            rc = subprocess.run(["sudo", "-v"]).returncode
-            self.message = "boot image read" if rc == 0 else "password cancelled"
-        finally:
-            curses.reset_prog_mode()
+        if not self._ensure_root():
+            return
         if hasattr(self.probe, "_uki_cache"):
             del self.probe._uki_cache
         self.rescan()
-
-    def _license(self):
-        name = self.rows[self.cursor][0]
-        license_name, license_url = catalog.LICENSE.get(name, ("unknown", ""))
-        self.message = f"{license_name}  {license_url}"
+        self.message = "authenticated as root"
 
     def _install_deps(self):
+        if not self._ensure_root():
+            return
         curses.def_prog_mode()
         curses.endwin()
         try:
@@ -256,6 +257,113 @@ class _App:
         finally:
             curses.reset_prog_mode()
         self.rescan()
+
+    def _ensure_root(self):
+        if _root_cached():
+            return True
+        self.message = ""
+        self.auth_line = ""
+        secret = self._ask_secret()
+        if not secret:
+            self.message = "root authentication cancelled"
+            return False
+        self._show_auth("checking")
+        result = cache_root(secret, _sudo_stdin)
+        if result == "ok":
+            self._show_auth("accepted")
+            self.message = "authenticated as root"
+            return True
+        self._show_auth("rejected")
+        self.message = "root password rejected"
+        return False
+
+    def _show_auth(self, phase):
+        self.auth_line = auth_notice(phase)
+        self.draw()
+        self.stdscr.refresh()
+
+    def _ask_secret(self):
+        self.stdscr.timeout(-1)
+        try:
+            curses.curs_set(1)
+        except curses.error:
+            pass
+        try:
+            return collect_secret(self._next_key, self._paint_secret)
+        finally:
+            try:
+                curses.curs_set(0)
+            except curses.error:
+                pass
+            self.stdscr.timeout(5000)
+
+    def _next_key(self):
+        getwch = getattr(self.stdscr, "get_wch", None)
+        if getwch:
+            try:
+                return getwch()
+            except curses.error:
+                return 27
+        return self.stdscr.getch()
+
+    def _paint_secret(self, count):
+        self.draw()
+        height, width = self.stdscr.getmaxyx()
+        field, hint_row = prompt_rows(height)
+        prompt = "Root password: " + ("*" * count)
+        hint = "Enter submits. Esc cancels. This authenticates as root."
+        self.stdscr.addnstr(field, 2, prompt, max(0, width - 4), _pair(3) | curses.A_BOLD)
+        self.stdscr.addnstr(hint_row, 2, hint, max(0, width - 4), _pair(3))
+        self.stdscr.refresh()
+
+
+def license_line(name):
+    license_name, url = catalog.LICENSE.get(name, ("unknown", ""))
+    if url:
+        return f"{license_name}  {url}"
+    return license_name
+
+
+def cache_root(password, run):
+    if not password:
+        return "cancelled"
+    argv = ["sudo", "-S", "-p", "", "-v"]
+    rc = run(argv, password + "\n")
+    return "ok" if rc == 0 else "rejected"
+
+
+def collect_secret(getch, draw):
+    chars = []
+    while True:
+        draw(len(chars))
+        key = getch()
+        if key in (10, 13, 343, "\n", "\r"):
+            secret = "".join(chars)
+            chars.clear()
+            return secret
+        if key in (27, "\x1b"):
+            chars.clear()
+            return None
+        if key in (8, 127, 263, "\b", "\x7f"):
+            if chars:
+                chars.pop()
+            continue
+        if isinstance(key, str) and key.isprintable():
+            chars.append(key)
+        elif isinstance(key, int) and 32 <= key <= 126:
+            chars.append(chr(key))
+
+
+def _root_cached():
+    return subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0
+
+
+def _sudo_stdin(argv, text):
+    try:
+        proc = subprocess.run(argv, input=text, text=True, capture_output=True, timeout=15)
+    except subprocess.TimeoutExpired:
+        return 1
+    return proc.returncode
 
 
 def row_text(name, title, status, marked):
@@ -285,53 +393,74 @@ def boot_image_state(probe):
     return "incomplete"
 
 
-def _status_line(state, age):
-    boot = {
-        "locked": "Boot image locked — press u",
-        "missing": "Boot image missing",
-        "ready": "Boot image read",
-        "incomplete": "Boot image read — a setting is missing",
+def _status_line(state):
+    return {
+        "locked": "Not authenticated as root. Press u to read the boot image.",
+        "missing": "Authenticated as root. Boot image missing.",
+        "ready": "Authenticated as root. Boot image read.",
+        "incomplete": "Authenticated as root. Boot image read, a setting is missing.",
     }[state]
-    if age:
-        return boot + "    " + age
-    return boot
 
 
-def _frame(stdscr, state, tick):
+def border_edge(columns, char):
+    return char * columns
+
+
+def banner_lines(kernel, age):
+    return (
+        "MACBOOK81 FIXIT",
+        "MacBook (Retina, 12-inch, Early 2015)",
+        age,
+        f"Omarchy  {kernel}",
+    )
+
+
+def prompt_rows(height):
+    return height - 7, height - 6
+
+
+def auth_notice(phase):
+    return {
+        "checking": "Password received. Wait a moment.",
+        "accepted": "Root password accepted.",
+        "rejected": "Root password rejected.",
+    }[phase]
+
+
+def frame_style(state):
+    if state == "locked":
+        return ("X", "red")
+    return ("+", "green")
+
+
+_COLOR = {"red": 3, "green": 1, "yellow": 2, "cyan": 4}
+
+
+def _frame(stdscr, state):
     height, width = stdscr.getmaxyx()
     if height < 2 or width < 2:
         return
-    char = _frame_char(state, tick)
-    attr = _pair(_frame_color(state)) | curses.A_BOLD
-    edge = char * (width - 1)
-    stdscr.addnstr(0, 0, edge, width - 1, attr)
-    try:
-        stdscr.addnstr(height - 1, 0, edge, width - 1, attr)
-    except curses.error:
-        pass
+    char, color = frame_style(state)
+    attr = _pair(_COLOR[color]) | curses.A_BOLD
+    _hline(stdscr, 0, width, char, attr)
+    _hline(stdscr, height - 1, width, char, attr)
     for y in range(1, height - 1):
         stdscr.addch(y, 0, char, attr)
         try:
             stdscr.addch(y, width - 1, char, attr)
         except curses.error:
             pass
-    if state == "locked":
-        for x in (0, max(0, width - 2)):
-            try:
-                stdscr.addch(0, x, "?", attr)
-                stdscr.addch(height - 2, x, "?", attr)
-            except curses.error:
-                pass
 
 
-def _frame_char(state, tick):
-    if state == "locked":
-        return ".~-+"[tick % 4]
-    return {"ready": "#", "incomplete": "+", "missing": "x"}.get(state, "#")
-
-
-def _frame_color(state):
-    return {"locked": 2, "ready": 1, "incomplete": 2, "missing": 3}.get(state, 4)
+def _hline(stdscr, y, width, char, attr):
+    if width < 1:
+        return
+    if width > 1:
+        stdscr.addnstr(y, 0, border_edge(width - 1, char), width - 1, attr)
+    try:
+        stdscr.addch(y, width - 1, char, attr)
+    except curses.error:
+        pass
 
 
 def _dep_step(packages):
@@ -360,8 +489,10 @@ def _status_color(status):
     return {"installed": 1, "partial": 2, "blocked": 3}.get(status, 0)
 
 
-def _banner(stdscr, width, kernel):
-    stdscr.addnstr(1, 2, "MACBOOK81 FIXIT", width - 4, _pair(4) | curses.A_BOLD)
-    stdscr.addnstr(2, 2, "MacBook (Retina, 12-inch, Early 2015)", width - 4, _pair(4))
-    stdscr.addnstr(3, 2, f"Omarchy  {kernel}", width - 4, _pair(4))
-    return 5
+def _banner(stdscr, width, kernel, age):
+    for row, text in enumerate(banner_lines(kernel, age), start=1):
+        attr = _pair(4)
+        if row == 1:
+            attr |= curses.A_BOLD
+        stdscr.addnstr(row, 2, text, max(0, width - 4), attr)
+    return 6

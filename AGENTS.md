@@ -8,8 +8,7 @@ reboots only if you say yes.
 - A refused host writes nothing. `--check` writes nothing, including no
   firmware download.
 - Status comes from the live system. The action log is not the status.
-- The screen may read the serial to show age. Do not log it, print it,
-  or put it in `--check`. Do not read a board serial or a battery date.
+- The screen may read the serial to show computer age and the manufacture date. Do not log either, print the serial, or put the date or the serial in `--check`. Do not read a board serial or a battery date.
 - `macbook12-spi-driver` at DKMS `added` is not installed. Say so.
   Do not call it the keyboard fix. Do not remove it unless asked.
 - Pins live in `catalog.py`. Do not float them to a branch tip.

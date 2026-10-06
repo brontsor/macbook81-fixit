@@ -92,7 +92,7 @@ class SystemProbe:
         return out.strip() if code == 0 else ""
 
     def laptop_age(self, today):
-        from macbook81_fixit.age import format_age, manufacture_date
+        from macbook81_fixit.age import computer_line, manufacture_date
 
         serial = self._product_serial()
         if serial is None:
@@ -100,7 +100,7 @@ class SystemProbe:
         built = manufacture_date(serial)
         if not built:
             return "unknown"
-        return format_age(built, today) or "unknown"
+        return computer_line(built, today) or "unknown"
 
     def _product_serial(self):
         path = "/sys/class/dmi/id/product_serial"

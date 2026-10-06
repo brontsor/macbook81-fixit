@@ -93,6 +93,22 @@ def format_age(built, today):
     return f"{rem} months"
 
 
+def computer_line(built, today):
+    age = format_age(built, today)
+    if not age:
+        return ""
+    made = f"{built.day} {built.strftime('%B')} {built.year}"
+    return f"Computer age  {age}    made {made}"
+
+
+def computer_status(state):
+    if state == "password":
+        return "Computer age  needs a root password (press u)"
+    if not state or state == "unknown":
+        return "Computer age  unknown"
+    return state
+
+
 def _week(char, second):
     if second and char == "Y":
         return 53
