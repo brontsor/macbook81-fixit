@@ -1,0 +1,48 @@
+# Reviewed commits. Do not float these to a branch tip.
+
+PIN = {
+    "keyboard": "d2febef9e408bc8feff1b8ddcd3c30e425fc5447",
+    "sleep": "0ddd1e58a9a8ac51dd9d935a533b259676da3f0f",
+    "audio": "d7a025c1039e67dc915625e3d148de01d3fce834",
+    "speaker": "b034ba15e3e03682ccde175807089c5854503168",
+    "webcam": "54fb8f25fcf76d4d5af682875f044dc0b6fa0b65",
+    "firmware": "60ee21228d9ca00a7bd84fdaefaff00a81f1db91",
+}
+
+REPO = {
+    "keyboard": "https://github.com/brontsor/macbook81-spi-pio.git",
+    "sleep": "https://github.com/brontsor/macbook81-s2idle-default.git",
+    "audio": "https://github.com/brontsor/macbook81-cs4208.git",
+    "speaker": "https://github.com/brontsor/macbook81-audio-profile.git",
+    "webcam": "https://github.com/patjak/facetimehd.git",
+    "firmware": "https://github.com/patjak/facetimehd-firmware.git",
+}
+
+LICENSE = {
+    "keyboard": ("MIT", "https://github.com/brontsor/macbook81-spi-pio/blob/master/LICENSE"),
+    "sleep": ("MIT", "https://github.com/brontsor/macbook81-s2idle-default/blob/master/LICENSE"),
+    "audio": ("GPL-2.0-or-later", "https://github.com/brontsor/macbook81-cs4208/blob/master/LICENSE"),
+    "speaker": ("MIT", "https://github.com/brontsor/macbook81-audio-profile/blob/master/LICENSE"),
+    "webcam": ("GPL-2.0-only", "https://github.com/patjak/facetimehd/blob/master/LICENSE"),
+}
+
+# patjak/facetimehd-firmware facetimehd-firmware-install.sh, the 10.12.6 combo.
+# The installer fetches three byte ranges. It does not download the whole image.
+APPLE_CAMERA_URL = (
+    "https://updates.cdn-apple.com/2019/cert/"
+    "041-90765-20191011-837e856d-b522-4865-b64c-641048ed77c4/"
+    "macOSUpdCombo10.12.6.dmg"
+)
+APPLE_RANGES = (
+    "699186570-703316225",
+    "703316242-707986973",
+    "430282546-439105037",
+)
+
+SHORT = {
+    "keyboard": "d2febef",
+    "sleep": "0ddd1e5",
+    "audio": "d7a025c",
+    "speaker": "b034ba1",
+    "webcam": "0.7.2",
+}
