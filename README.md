@@ -2,6 +2,8 @@
 
 Installer for a MacBook (Retina, 12-inch, Early 2015) running Omarchy.
 
+A short history of the machine is in [HISTORY.md](HISTORY.md).
+
 A fresh install on this machine leaves the built-in keyboard, trackpad, speakers, and webcam unusable or unnamed. This program checks the computer and installs the fixes we use for those. It does not cover Bluetooth or Wi-Fi.
 
 You run it as yourself, not as root. It asks for your password when a step needs one. It will not reboot the machine.
@@ -28,12 +30,14 @@ The first screen is a scan. Each row is one fix, with a status.
 - Space marks a row
 - `a` installs the marked rows
 - `x` removes the marked rows
-- `u` reads the boot image
+- `u` authenticates as root, then reads the boot image
 - `q` quits
 
-The boot image is the file this machine starts from. The keyboard and sleep settings live in it. Reading it asks for your password. The border is yellow and moving until that read succeeds.
+The boot image is the file this machine starts from. The keyboard and sleep settings live in it. Reading it means authenticating as root. The password is asked on this screen, not on a cleared one. The border is a red X until that succeeds, then a green +.
 
-Each row has a license column. `i` shows the license link.
+Each row has a license column. The selected row also shows the license link. There is no separate license key.
+
+A line under the model name says Computer age. After root authentication it adds the manufacture date. It does not show the serial.
 
 It asks before it writes. If a change rebuilt the boot image, it tells you to reboot by hand, and asks if it should reboot now. It reboots only if you say yes. Then run it again and look at the scan.
 
@@ -41,25 +45,25 @@ It asks before it writes. If a change rebuilt the boot image, it tells you to re
 
 ### Keyboard and trackpad
 
-On a stock boot the built-in keyboard and trackpad time out. This installs the workaround already used on other Omarchy machines of this model.
+On a stock boot the built-in keyboard and trackpad time out. This installs the public workaround: `initcall_blacklist=dw_pci_driver_init`. The write-up that names it is [Matthias Granberry's gist](https://gist.github.com/matthiasjg/78aaf7802146f0b89be3da9e4feb111f). [omacom/omarchy#9735](https://github.com/omacom/omarchy/pull/9735) copies the keyboard half. This package does not install the gist's hibernate hooks or its suspend detach hook.
 
 [macbook81-spi-pio](https://github.com/brontsor/macbook81-spi-pio)
 
 ### Speakers and headphones
 
-Stock Linux sees the audio chip and does not play the internal speakers. This installs our driver. Plugging or unplugging headphones moves whatever is playing. You do not have to pick the output from a menu.
+Stock Linux sees the audio chip and does not play the internal speakers. This installs our fork of [omnidecker/macbook8.1-speaker-driver](https://github.com/omnidecker/macbook8.1-speaker-driver) at `e4134fb`, itself a fork of [thomas-shirley/macbook8.1-speaker-driver](https://github.com/thomas-shirley/macbook8.1-speaker-driver). That tree credits davidjo and leifliddy. Plugging or unplugging headphones moves whatever is playing. You do not have to pick the output from a menu. That jack move is ours.
 
 [macbook81-cs4208](https://github.com/brontsor/macbook81-cs4208)
 
 ### Speaker names and equalizer
 
-Separate from the driver. Without it, the headphones and the microphone are both named "CS4208 Analog". This names them Headphones, Internal Microphone, and Speaker (Raw), and adds the equalizer we use with the speakers. The equalizer came from a published macOS layout. We did not measure it on this machine.
+Separate from the driver. Without it, the headphones and the microphone are both named "CS4208 Analog". This names them Headphones, Internal Microphone, and Speaker (Raw), and adds the equalizer we use with the speakers. The coefficients are the macOS layout100 EQ from [thomas-shirley/macbook8.1-speaker-driver](https://github.com/thomas-shirley/macbook8.1-speaker-driver). We did not measure them on this machine.
 
 [macbook81-audio-profile](https://github.com/brontsor/macbook81-audio-profile)
 
 ### Sleep default
 
-Deep sleep on this machine can resume with a dead keyboard. This makes light sleep the default, so a normal suspend does not do that. It does not fix deep sleep. Closing the lid has also hung once, in light sleep. The screen says so.
+Deep sleep on this machine can resume with a dead keyboard. This makes light sleep the default, so a normal suspend does not do that. The same `mem_sleep_default=s2idle` token is in the gist above, on one line with the keyboard parameter. The choice to use it here was a listen on this machine, not that gist's hibernate script. It does not fix deep sleep. Closing the lid has also hung once, in light sleep. The screen says so.
 
 [macbook81-s2idle-default](https://github.com/brontsor/macbook81-s2idle-default)
 
@@ -90,7 +94,7 @@ The status on each row is read from the machine, not from a log.
 | not-installed | Not present |
 | blocked | Something else is in the way. The program will not install over it |
 
-Two boot fixes, the keyboard and the sleep default, live in the boot image. Reading that image needs your password. If a row says the image is not readable, press `u`, enter the password, and it scans again. `s` scans again without that.
+Two boot fixes, the keyboard and the sleep default, live in the boot image. Reading that image authenticates as root. If a row says the image is not readable, press `u` and enter the root password on the same screen. `s` scans again without that.
 
 ### Reboot and the boot image
 
@@ -110,7 +114,7 @@ Each fix is pinned to a reviewed commit. The program does not follow a branch ti
 
 ### License
 
-This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are GPL. Press `i` on a row for that row's license link.
+This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are GPL. The selected row shows that row's license and the link.
 
 ### For agents
 
