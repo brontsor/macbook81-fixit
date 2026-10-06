@@ -1,10 +1,12 @@
 # macbook81-fixit
 
-Installer for the MacBook (Retina, 12-inch, Early 2015), model `MacBook8,1`,
-on Omarchy.
+Installer for a MacBook (Retina, 12-inch, Early 2015) running Omarchy.
 
-Clone this repository and run it. Do not run it as root. It asks for sudo
-when a step needs it. It does not reboot.
+A fresh install on this machine leaves the built-in keyboard, trackpad, speakers, and webcam unusable or unnamed. This program checks the computer and installs the fixes we use for those. It does not cover Bluetooth or Wi-Fi.
+
+You run it as yourself, not as root. It asks for your password when a step needs one. It will not reboot the machine.
+
+## Run it
 
 ```bash
 git clone https://github.com/brontsor/macbook81-fixit.git
@@ -12,69 +14,97 @@ cd macbook81-fixit
 python3 -m macbook81_fixit
 ```
 
-`python3 -m macbook81_fixit --check` prints the live status and writes
-nothing. That includes no download.
+To see what is already in place, and change nothing:
 
-The program matches `product_name` `MacBook8,1` only. `product_family`
-`Crb` is normal on this model and is not a match. Any other product is
-refused, and nothing is written.
+```bash
+python3 -m macbook81_fixit --check
+```
 
-## Patches
+## The screen
 
-| Patch | Source | License |
-|---|---|---|
-| Keyboard and trackpad | [macbook81-spi-pio](https://github.com/brontsor/macbook81-spi-pio) | MIT |
-| Audio driver | [macbook81-cs4208](https://github.com/brontsor/macbook81-cs4208) | GPL-2.0-or-later |
-| Speaker profile | [macbook81-audio-profile](https://github.com/brontsor/macbook81-audio-profile) | MIT |
-| Sleep default | [macbook81-s2idle-default](https://github.com/brontsor/macbook81-s2idle-default) | MIT |
-| Webcam | [patjak/facetimehd](https://github.com/patjak/facetimehd) tag `0.7.2` | GPL-2.0-only |
+The first screen is a scan. Each row is one fix, with a status.
 
-Each clone is pinned to a reviewed commit. The program does not track a
-branch tip.
+- `j` and `k`, or the arrow keys, move through the list
+- Space marks a row
+- `a` installs the marked rows
+- `x` removes the marked rows
+- `q` quits
 
-Not included: Bluetooth, Wi-Fi, deep sleep, hibernate, `macbook12-spi-driver`,
-`macbook12-audio`.
+It asks before it writes. After an install, reboot yourself, then run it again and look at the scan.
 
-The sleep row is the default that avoids the deep-sleep wedge. It is not a
-sleep fix. A lid close has hung in s2idle.
+## What it installs
 
-The speaker profile names the nodes Headphones, Internal Microphone, and
-Speaker (Raw). The equalizer coefficients come from a published macOS layout.
-They were not measured on this machine.
+### Keyboard and trackpad
 
-The headphone jack watcher is part of the audio driver, not its own row.
-It moves the playing stream. It does not restart WirePlumber.
+On a stock boot the built-in keyboard and trackpad time out. This installs the workaround already used on other Omarchy machines of this model.
 
-## Webcam firmware
+[macbook81-spi-pio](https://github.com/brontsor/macbook81-spi-pio)
 
-The firmware is not in git. This program downloads the macOS 10.12.6 camera
-package from Apple, using the byte ranges in
-[patjak/facetimehd-firmware](https://github.com/patjak/facetimehd-firmware).
-The download starts in the background when the firmware is missing. Install
-still runs that upstream script, which checks the hashes. Do not commit the
-package or the extracted files.
+### Speakers and headphones
 
-While these repositories are private, `git clone` fails for a stranger.
-`gh auth login` as someone who can see them lets this program fall back to
-`gh repo clone`. Once they are public, plain git is enough.
+Stock Linux sees the audio chip and does not play the internal speakers. This installs our driver. Plugging or unplugging headphones moves whatever is playing. You do not have to pick the output from a menu.
 
-## What installed means
+[macbook81-cs4208](https://github.com/brontsor/macbook81-cs4208)
 
-Status comes from the live machine, not from a log. A file on disk whose
-boot image or running check does not match is `partial`. The boot image is
-a Limine UKI. Reading it needs sudo. Press `u` in the screen to authenticate
-and rescan. The program rebuilds that image once, with `limine-mkinitcpio`,
-after the selected writes. It does not run `limine-update`.
+### Speaker names and equalizer
 
-## Keys
+Separate from the driver. Without it, the headphones and the microphone are both named "CS4208 Analog". This names them Headphones, Internal Microphone, and Speaker (Raw), and adds the equalizer we use with the speakers. The equalizer came from a published macOS layout. We did not measure it on this machine.
 
-`j`/`k` move. Space marks. `a` applies. `x` removes. `i` shows the license.
-`u` reads the boot image. `s` scans again. `q` quits.
+[macbook81-audio-profile](https://github.com/brontsor/macbook81-audio-profile)
 
-## For agents
+### Sleep default
+
+Deep sleep on this machine can resume with a dead keyboard. This makes light sleep the default, so a normal suspend does not do that. It does not fix deep sleep. Closing the lid has also hung once, in light sleep. The screen says so.
+
+[macbook81-s2idle-default](https://github.com/brontsor/macbook81-s2idle-default)
+
+### Webcam
+
+The FaceTime camera is not a USB webcam. This installs patjak's driver and downloads the firmware from Apple. The firmware is not in our repositories.
+
+[patjak/facetimehd](https://github.com/patjak/facetimehd)
+
+Bluetooth, Wi-Fi, deep sleep, and hibernate are not in this package.
+
+## Details
+
+### Which machine
+
+It runs only when the product name is `MacBook8,1`. These machines report a family of `Crb`. That string is normal, and the program does not use it. On any other product it prints what it read and exits. It does not write anything.
+
+### Status
+
+The status on each row is read from the machine, not from a log.
+
+| Status | Meaning |
+|---|---|
+| installed | The live check matches |
+| partial | A file is present, but the boot image or the running check does not match yet |
+| not-installed | Not present |
+| blocked | Something else is in the way. The program will not install over it |
+
+Two boot fixes, the keyboard and the sleep default, live in the boot image. Reading that image needs your password. If a row says the image is not readable, press `u`, enter the password, and it scans again. `s` scans again without that.
+
+### Reboot and the boot image
+
+This machine boots a Limine UKI. If an install changes a boot file, the program rebuilds that image once, with `limine-mkinitcpio`, after the other writes. It does not run `limine-update`. It does not reboot.
+
+### Webcam firmware
+
+The download starts in the background when the firmware is missing. Install then runs patjak's own script, which fetches the macOS 10.12.6 camera package from Apple and checks the hashes. Do not commit that package, or the files extracted from it.
+
+[patjak/facetimehd-firmware](https://github.com/patjak/facetimehd-firmware)
+
+### Private repositories
+
+Until these repositories are public, a plain `git clone` fails for anyone who cannot see them. If you can, `gh auth login` is enough. The program tries `gh repo clone` when `git clone` fails.
+
+Each fix is pinned to a reviewed commit. The program does not follow a branch tip.
+
+### License
+
+This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are GPL. Press `i` on a row for that row's license link.
+
+### For agents
 
 Read `AGENTS.md` before changing this tree.
-
-## License
-
-MIT. See `LICENSE`. The patches keep their own licenses.
