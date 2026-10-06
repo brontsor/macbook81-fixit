@@ -26,6 +26,8 @@ python3 -m macbook81_fixit --check
 
 The first screen is a scan. Each row is one fix, with a status.
 
+![Authenticated screen. The border is green after root authentication.](docs/screen.png)
+
 - `j` and `k`, or the arrow keys, move through the list
 - Space marks a row
 - `a` installs the marked rows
