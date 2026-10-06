@@ -1,7 +1,8 @@
 import curses
+import os
 import subprocess
 import time
-from datetime import date
+from datetime import date, datetime
 
 from macbook81_fixit import catalog
 from macbook81_fixit.age import computer_status
@@ -130,11 +131,13 @@ class _App:
             self.stdscr.addnstr(y, 2, text, width - 4)
             y += 1
         status = _status_line(state)
-        self.stdscr.addnstr(height - 4, 2, status, width - 4, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
-        self.stdscr.addnstr(height - 3, 2, HELP[0], width - 4, _pair(4))
-        self.stdscr.addnstr(height - 2, 2, HELP[1], width - 4, _pair(4))
-        if self.message and y < field:
-            self.stdscr.addnstr(y, 2, self.message, width - 4)
+        self.stdscr.addnstr(status_row(height), 2, status, width - 4, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
+        self.stdscr.addnstr(height - 4, 2, HELP[0], width - 4, _pair(4))
+        self.stdscr.addnstr(height - 3, 2, HELP[1], width - 4, _pair(4))
+        self.stdscr.addnstr(height - 2, 2, footer_line(), width - 4, _pair(4))
+        note = description_message(self.message)
+        if note and y < field:
+            self.stdscr.addnstr(y, 2, note, width - 4)
         if self.auth_line:
             self.stdscr.addnstr(field, 2, self.auth_line, width - 4, _pair(3) | curses.A_BOLD)
             self.stdscr.addnstr(hint_row, 2, " " * max(0, width - 4), width - 4)
@@ -238,7 +241,6 @@ class _App:
         if hasattr(self.probe, "_uki_cache"):
             del self.probe._uki_cache
         self.rescan()
-        self.message = "authenticated as root"
 
     def _install_deps(self):
         if not self._ensure_root():
@@ -271,7 +273,6 @@ class _App:
         result = cache_root(secret, _sudo_stdin)
         if result == "ok":
             self._show_auth("accepted")
-            self.message = "authenticated as root"
             return True
         self._show_auth("rejected")
         self.message = "root password rejected"
@@ -406,17 +407,81 @@ def border_edge(columns, char):
     return char * columns
 
 
-def banner_lines(kernel, age):
+def title_line(version, built):
+    return f"MacBook8,1 fixit version {version} built on {built}"
+
+
+_STAMP = None
+
+
+def release_stamp(read=None):
+    global _STAMP
+    if read is None and _STAMP is not None:
+        return _STAMP
+    if read is None:
+        read = _read_git_stamp
+    version, built = read()
+    version = version.strip().lstrip("v") or "0.1.0"
+    text = built.strip()
+    if not text:
+        stamped = (version, "unknown")
+    else:
+        parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S %z").astimezone()
+        zone = parsed.tzname() or ""
+        stamp = f"{parsed.day} {parsed.strftime('%B')} {parsed.year}, {parsed.strftime('%H:%M')}"
+        if zone:
+            stamp = f"{stamp} {zone}"
+        stamped = (version, stamp)
+    if read is _read_git_stamp:
+        _STAMP = stamped
+    return stamped
+
+
+def _read_git_stamp():
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def one(args):
+        result = subprocess.run(args, cwd=root, capture_output=True, text=True)
+        if result.returncode != 0:
+            return ""
+        return result.stdout
+
     return (
-        "MACBOOK81 FIXIT",
+        one(["git", "describe", "--tags", "--abbrev=0"]) or "0.1.0",
+        one(["git", "log", "-1", "--format=%ci"]),
+    )
+
+
+def banner_lines(kernel, age, version=None, built=None):
+    if version is None or built is None:
+        version, built = release_stamp()
+    return (
+        title_line(version, built),
         "MacBook (Retina, 12-inch, Early 2015)",
         age,
         f"Omarchy  {kernel}",
     )
 
 
+def description_message(text):
+    if text == "authenticated as root":
+        return ""
+    return text
+
+
+def footer_line():
+    return (
+        "dm the author @bronson on X. "
+        "Distributed under MIT license. No warranty, caveat emptor."
+    )
+
+
+def status_row(height):
+    return height - 5
+
+
 def prompt_rows(height):
-    return height - 7, height - 6
+    return height - 8, height - 7
 
 
 def auth_notice(phase):

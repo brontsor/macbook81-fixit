@@ -14,6 +14,11 @@ from macbook81_fixit.tui import (
     needs_reboot,
     prompt_rows,
     row_text,
+    title_line,
+    release_stamp,
+    description_message,
+    footer_line,
+    status_row,
 )
 
 
@@ -49,6 +54,40 @@ class TestScreen(unittest.TestCase):
         self.assertEqual(border_edge(80, "X"), "X" * 80)
         self.assertEqual(len(border_edge(1, "+")), 1)
 
+    def test_the_top_line_names_the_version_and_when_it_was_built(self):
+        line = title_line("0.1.0", "6 October 2026, 17:47 CDT")
+        self.assertEqual(
+            line,
+            "MacBook8,1 fixit version 0.1.0 built on 6 October 2026, 17:47 CDT",
+        )
+        lines = banner_lines(
+            "7.2.5-4-omarchy",
+            "Computer age",
+            "0.1.0",
+            "6 October 2026, 17:47 CDT",
+        )
+        self.assertEqual(lines[0], line)
+        self.assertNotIn("MACBOOK81", lines[0])
+
+    def test_the_stamp_uses_the_tag_and_the_commit_time(self):
+        version, built = release_stamp(lambda: ("v0.1.0\n", "2026-10-06 17:32:13 -0500\n"))
+        self.assertEqual(version, "0.1.0")
+        self.assertEqual(built, "6 October 2026, 17:32 CDT")
+        self.assertNotIn("-0500", built)
+
+    def test_the_description_does_not_repeat_root_authentication(self):
+        self.assertEqual(description_message("authenticated as root"), "")
+        self.assertEqual(description_message("scanned"), "scanned")
+        self.assertEqual(description_message(""), "")
+
+    def test_the_last_line_names_the_author_and_the_license(self):
+        self.assertEqual(
+            footer_line(),
+            "dm the author @bronson on X. Distributed under MIT license. No warranty, caveat emptor.",
+        )
+        self.assertEqual(status_row(32), 27)
+        self.assertEqual(status_row(22), 17)
+
     def test_computer_age_sits_under_the_model_name(self):
         lines = banner_lines("7.2.5-4-omarchy", "Computer age  11 years, 6 months    made 19 March 2015")
         self.assertEqual(lines[1], "MacBook (Retina, 12-inch, Early 2015)")
@@ -63,8 +102,8 @@ class TestScreen(unittest.TestCase):
             field, hint = prompt_rows(height)
             self.assertNotIn(age_row, (field, hint))
             self.assertGreater(field, age_row)
-            self.assertLess(max(field, hint), height - 4)
-            self.assertGreaterEqual((height - 4) - min(field, hint), 3)
+            self.assertLess(max(field, hint), status_row(height))
+            self.assertGreaterEqual(status_row(height) - min(field, hint), 3)
 
     def test_a_rejected_password_is_not_drawn_as_accepted(self):
         self.assertIn("Wait", auth_notice("checking"))
