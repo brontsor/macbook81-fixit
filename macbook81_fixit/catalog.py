@@ -1,10 +1,10 @@
 # Reviewed commits. Do not float these to a branch tip.
 
 PIN = {
-    "keyboard": "d2febef9e408bc8feff1b8ddcd3c30e425fc5447",
-    "sleep": "0ddd1e58a9a8ac51dd9d935a533b259676da3f0f",
-    "audio": "d7a025c1039e67dc915625e3d148de01d3fce834",
-    "speaker": "b034ba15e3e03682ccde175807089c5854503168",
+    "keyboard": "930eceb20dd27aa8367048c114f2535f2ff04281",
+    "sleep": "adbc9f4f0de885ce47d29a6b44e56831be07558a",
+    "audio": "3dcc9ef23e852a17a872587bcd1ade2a25c1d064",
+    "speaker": "10794e14e9cf9cfb82ccfe81983dd0c6095629da",
     "webcam": "54fb8f25fcf76d4d5af682875f044dc0b6fa0b65",
     "firmware": "60ee21228d9ca00a7bd84fdaefaff00a81f1db91",
 }
@@ -40,9 +40,9 @@ APPLE_RANGES = (
 )
 
 SHORT = {
-    "keyboard": "d2febef",
-    "sleep": "0ddd1e5",
-    "audio": "d7a025c",
-    "speaker": "b034ba1",
+    "keyboard": "930eceb",
+    "sleep": "adbc9f4",
+    "audio": "3dcc9ef",
+    "speaker": "10794e1",
     "webcam": "0.7.2",
 }
