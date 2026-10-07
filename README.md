@@ -2,11 +2,20 @@
 
 Installer for a MacBook (Retina, 12-inch, Early 2015) running Omarchy.
 
-A short history of the machine is in [HISTORY.md](HISTORY.md).
+A short history of the machine is in [HISTORY.md](HISTORY.md). The latest changes are at the bottom. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
-A fresh install on this machine leaves the built-in keyboard, trackpad, speakers, and webcam unusable or unnamed. This program checks the computer and installs the fixes we use for those. It does not cover Bluetooth or Wi-Fi.
+A fresh Omarchy install on this model leaves the following broken. This program does the following about each.
 
-You run it as yourself, not as root. It asks for your password when a step needs one. It will not reboot the machine.
+- The built-in keyboard and trackpad time out. The SPI controller accepts a transfer and never finishes it. This installs `initcall_blacklist=dw_pci_driver_init`, so that controller uses PIO. It does not install the hibernate hooks or the suspend detach hook from the write-up that names that token.
+- The internal speakers are silent. The audio chip is visible, and the stock driver does not play them. This installs the speaker driver.
+- The headphones and the microphone are both named "CS4208 Analog". This names them Headphones, Internal Microphone, and Speaker (Raw), and adds the equalizer used with the speakers. Those coefficients were not measured here.
+- Nothing moves playback when the headphone jack changes. This installs that switch with the speaker driver. You do not pick the output from a menu.
+- A normal suspend uses deep sleep. That can resume with a dead keyboard until the next reboot. This makes light sleep the default. It does not fix deep sleep, and it does not install hibernate.
+- The FaceTime camera is not a USB webcam, so there is no picture. This installs patjak's driver and downloads the firmware from Apple. The firmware is not in this repository.
+- Bluetooth has no controller. This program does not install one.
+- Wi-Fi comes up. This program does not change it.
+
+You run it as yourself, not as root. It asks for your password when a step needs one. It reboots only if you say yes.
 
 ## Run it
 
@@ -35,7 +44,7 @@ The first screen is a scan. Each row is one fix, with a status.
 - `u` authenticates as root, then reads the boot image
 - `q` quits
 
-The boot image is the file this machine starts from. The keyboard and sleep settings live in it. Reading it means authenticating as root. The password is asked on this screen, not on a cleared one. The border is a red X until that succeeds, then a green +.
+The boot image is the file this machine starts from. The keyboard and sleep settings live in it. Reading it means authenticating as root. The password is asked on this screen, not on a cleared one. The border is a solid block, red until that succeeds, then green.
 
 Each row has a license column. The selected row also shows the license link. There is no separate license key.
 
@@ -117,6 +126,21 @@ Each fix is pinned to a reviewed commit. The program does not follow a branch ti
 ### License
 
 This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are GPL. The selected row shows that row's license and the link.
+
+## Changes
+
+The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
+
+### [v0.1.2](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.2)
+
+- A scan says Scanning while it runs. It does not leave "scanned" under the package description.
+- Apply, remove, and the other action results use the notice row above the status band. The next key clears them.
+- The first paint no longer crashes. `addnstr` was called without a length.
+- The border is a solid block, red until root authentication, then green. Text starts one cell inside the frame.
+- The screen needs 76 columns and 24 rows. A shorter window does not draw a package row on the password line.
+- The opening lists what a fresh Omarchy install leaves broken, and what this program does about each item.
+- Older releases are in CHANGELOG.md. This file keeps the latest only.
+- The README image is still the previous authenticated screen. It does not show the block border. The manufacture date is covered.
 
 ### For agents
 

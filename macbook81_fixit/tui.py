@@ -114,44 +114,56 @@ class _App:
         height, width = self.stdscr.getmaxyx()
         state = boot_image_state(self.probe)
         _frame(self.stdscr, state)
-        if height < 22 or width < 76:
-            self.stdscr.addnstr(2, 2, "Terminal too small. Need 76 columns and 22 rows.", max(0, width - 4))
+        min_width, min_height = screen_min()
+        if height < min_height or width < min_width:
+            top, left = content_origin()
+            self.stdscr.addnstr(
+                top,
+                left,
+                f"Terminal too small. Need {min_width} columns and {min_height} rows.",
+                content_span(width),
+            )
             self.stdscr.refresh()
             return
         y = _banner(self.stdscr, width, self.probe.kernel_release(), self.age_label)
+        _top, left = content_origin()
+        span = content_span(width)
+        field, hint_row = prompt_rows(height)
         if self.deps:
-            self.stdscr.addnstr(y, 2, "missing: " + ", ".join(self.deps) + "   [d] install", width - 4)
+            self.stdscr.addnstr(y, left, "missing: " + ", ".join(self.deps) + "   [d] install", span)
             y += 1
         header = f"{'':3} {'Patch':<22} {'Status':<12} {'License':<18} Version"
-        self.stdscr.addnstr(y, 2, header, width - 4, _pair(4))
-        y += 1
+        self.stdscr.addnstr(y, left, header, span, _pair(4))
+        y = first_catalog_row(bool(self.deps))
         for index, (name, title, report) in enumerate(self.rows):
+            if y >= field:
+                break
             line = row_text(name, title, report.status, name in self.marked)
             attr = _pair(_status_color(report.status))
             if index == self.cursor:
                 attr |= curses.A_REVERSE
-            self.stdscr.addnstr(y, 2, line, width - 4, attr)
+            self.stdscr.addnstr(y, left, line, span, attr)
             y += 1
         y += 1
         name, title, report = self.rows[self.cursor]
-        field, hint_row = prompt_rows(height)
         floor = field
         if y < floor:
-            self.stdscr.addnstr(y, 2, title, width - 4, curses.A_BOLD)
+            self.stdscr.addnstr(y, left, title, span, curses.A_BOLD)
             y += 1
         for text in (license_line(name), report.detail, report.note, self._extra(), self._boot_note()):
             if not text or y >= floor:
                 break
-            self.stdscr.addnstr(y, 2, text, width - 4)
+            self.stdscr.addnstr(y, left, text, span)
             y += 1
         status = _status_line(state)
-        self.stdscr.addnstr(status_row(height), 2, status, width - 4, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
-        self.stdscr.addnstr(height - 4, 2, HELP[0], width - 4, _pair(4))
-        self.stdscr.addnstr(height - 3, 2, HELP[1], width - 4, _pair(4))
-        self.stdscr.addnstr(height - 2, 2, footer_line(), width - 4, _pair(4))
+        self.stdscr.addnstr(status_row(height), left, status, span, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
+        help_a, help_b = help_rows(height)
+        self.stdscr.addnstr(help_a, left, HELP[0], span, _pair(4))
+        self.stdscr.addnstr(help_b, left, HELP[1], span, _pair(4))
+        self.stdscr.addnstr(footer_row(height), left, footer_line(), span, _pair(4))
         if self.auth_line:
-            self.stdscr.addnstr(field, 2, self.auth_line, width - 4, _pair(3) | curses.A_BOLD)
-            self.stdscr.addnstr(hint_row, 2, " " * max(0, width - 4), width - 4)
+            self.stdscr.addnstr(field, left, self.auth_line, span, _pair(3) | curses.A_BOLD)
+            self.stdscr.addnstr(hint_row, left, " " * span, span)
         self.stdscr.refresh()
 
     def _boot_note(self):
@@ -321,10 +333,12 @@ class _App:
         self.draw()
         height, width = self.stdscr.getmaxyx()
         field, hint_row = prompt_rows(height)
+        _top, left = content_origin()
+        span = content_span(width)
         prompt = "Root password: " + ("*" * count)
         hint = "Enter submits. Esc cancels. This authenticates as root."
-        self.stdscr.addnstr(field, 2, prompt, max(0, width - 4), _pair(3) | curses.A_BOLD)
-        self.stdscr.addnstr(hint_row, 2, hint, max(0, width - 4), _pair(3))
+        self.stdscr.addnstr(field, left, prompt, span, _pair(3) | curses.A_BOLD)
+        self.stdscr.addnstr(hint_row, left, hint, span, _pair(3))
         self.stdscr.refresh()
 
 
@@ -492,8 +506,9 @@ def kept_notice(previous, scanning):
 def paint_first_scan(stdscr):
     text = scan_notice(True)
     _height, width = stdscr.getmaxyx()
+    top, left = content_origin()
     stdscr.erase()
-    stdscr.addnstr(1, 2, text, max(0, width - 4))
+    stdscr.addnstr(top, left, text, content_span(width))
     stdscr.refresh()
 
 
@@ -510,12 +525,39 @@ def footer_line():
     )
 
 
+def screen_min():
+    return 76, 24
+
+
+def first_catalog_row(deps):
+    y = content_origin()[0] + len(banner_lines("k", "age")) + 1
+    if deps:
+        y += 1
+    return y + 1
+
+
+def content_origin():
+    return 2, 2
+
+
+def content_span(width):
+    return max(0, width - 4)
+
+
+def footer_row(height):
+    return height - 3
+
+
+def help_rows(height):
+    return height - 5, height - 4
+
+
 def status_row(height):
-    return height - 5
+    return height - 6
 
 
 def prompt_rows(height):
-    return height - 8, height - 7
+    return height - 9, height - 8
 
 
 def auth_notice(phase):
@@ -528,8 +570,8 @@ def auth_notice(phase):
 
 def frame_style(state):
     if state == "locked":
-        return ("X", "red")
-    return ("+", "green")
+        return ("█", "red")
+    return ("█", "green")
 
 
 _COLOR = {"red": 3, "green": 1, "yellow": 2, "cyan": 4}
@@ -589,9 +631,13 @@ def _status_color(status):
 
 
 def _banner(stdscr, width, kernel, age):
-    for row, text in enumerate(banner_lines(kernel, age), start=1):
+    top, left = content_origin()
+    lines = banner_lines(kernel, age)
+    span = content_span(width)
+    for offset, text in enumerate(lines):
+        row = top + offset
         attr = _pair(4)
-        if row == 1:
+        if offset == 0:
             attr |= curses.A_BOLD
-        stdscr.addnstr(row, 2, text, max(0, width - 4), attr)
-    return 6
+        stdscr.addnstr(row, left, text, span, attr)
+    return top + len(lines) + 1

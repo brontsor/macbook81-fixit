@@ -1,3 +1,4 @@
+import locale
 import sys
 
 from macbook81_fixit import catalog
@@ -24,6 +25,10 @@ def main(argv=None):
     if not probe.exists(FIRMWARE):
         start_firmware(probe.home())
         log.record("prefetch", "Apple camera ranges")
+    try:
+        locale.setlocale(locale.LC_CTYPE, "")
+    except locale.Error:
+        pass
     import curses
     from macbook81_fixit.tui import run
     curses.wrapper(lambda stdscr: run(stdscr, probe, log))
