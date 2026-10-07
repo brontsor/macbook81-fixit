@@ -19,6 +19,10 @@ from macbook81_fixit.tui import (
     description_message,
     footer_line,
     status_row,
+    scan_notice,
+    notice_line,
+    kept_notice,
+    paint_first_scan,
 )
 
 
@@ -77,8 +81,58 @@ class TestScreen(unittest.TestCase):
 
     def test_the_description_does_not_repeat_root_authentication(self):
         self.assertEqual(description_message("authenticated as root"), "")
-        self.assertEqual(description_message("scanned"), "scanned")
+        self.assertEqual(description_message("scanned"), "")
         self.assertEqual(description_message(""), "")
+        self.assertEqual(scan_notice(True), "Scanning.")
+        self.assertEqual(scan_notice(False), "")
+
+    def test_action_results_stay_off_the_package_description(self):
+        for text in (
+            "nothing marked",
+            "cancelled",
+            "done",
+            "stopped",
+            "done. reboot by hand when you are ready",
+            "reboot did not start. reboot by hand",
+            "rebooting",
+            "dependencies installed",
+            "dependency install failed",
+            "root authentication cancelled",
+            "root password rejected",
+            "already installed, skipped",
+        ):
+            self.assertEqual(description_message(text), "", text)
+        self.assertEqual(notice_line("nothing marked"), "nothing marked")
+        self.assertEqual(notice_line("done"), "done")
+        self.assertEqual(notice_line("root password rejected"), "")
+        self.assertEqual(notice_line("scanned"), "")
+        self.assertEqual(notice_line(""), "")
+        self.assertEqual(kept_notice("done", "Scanning."), "done")
+        self.assertEqual(kept_notice("Scanning.", "Scanning."), "")
+        self.assertEqual(kept_notice("", "Scanning."), "")
+
+    def test_the_first_scan_line_passes_a_length(self):
+        seen = {}
+
+        class Screen:
+            def erase(self):
+                pass
+
+            def refresh(self):
+                pass
+
+            def getmaxyx(self):
+                return (24, 80)
+
+            def addnstr(self, y, x, text, n, attr=0):
+                if not isinstance(n, int):
+                    raise TypeError("'str' object cannot be interpreted as an integer")
+                seen["call"] = (y, x, text, n)
+
+        paint_first_scan(Screen())
+        self.assertEqual(seen["call"][2], "Scanning.")
+        self.assertIsInstance(seen["call"][3], int)
+        self.assertGreater(seen["call"][3], 0)
 
     def test_the_last_line_names_the_author_and_the_license(self):
         self.assertEqual(

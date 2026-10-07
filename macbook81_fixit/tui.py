@@ -47,11 +47,26 @@ class _App:
         self.rescan()
 
     def rescan(self):
-        if hasattr(self.probe, "_uki_cache"):
-            pass
+        kept = kept_notice(self.auth_line, scan_notice(True))
+        self._show_scanning()
         self.rows = scan(self.probe)
         self.deps = missing(self.probe)
         self._refresh_age(force=True)
+        self.auth_line = kept
+
+    def _notice(self, text):
+        self.message = ""
+        shown = notice_line(text)
+        if shown:
+            self.auth_line = shown
+
+    def _show_scanning(self):
+        self.auth_line = scan_notice(True)
+        if self.rows:
+            self.draw()
+            return
+        self.stdscr.erase()
+        paint_first_scan(self.stdscr)
 
     def loop(self):
         self.stdscr.timeout(5000)
@@ -91,7 +106,6 @@ class _App:
                 self._read_boot_image()
             elif key in (ord("s"), ord("S")):
                 self.rescan()
-                self.message = "scanned"
             elif key in (ord("d"), ord("D")) and self.deps:
                 self._install_deps()
 
@@ -135,9 +149,6 @@ class _App:
         self.stdscr.addnstr(height - 4, 2, HELP[0], width - 4, _pair(4))
         self.stdscr.addnstr(height - 3, 2, HELP[1], width - 4, _pair(4))
         self.stdscr.addnstr(height - 2, 2, footer_line(), width - 4, _pair(4))
-        note = description_message(self.message)
-        if note and y < field:
-            self.stdscr.addnstr(y, 2, note, width - 4)
         if self.auth_line:
             self.stdscr.addnstr(field, 2, self.auth_line, width - 4, _pair(3) | curses.A_BOLD)
             self.stdscr.addnstr(hint_row, 2, " " * max(0, width - 4), width - 4)
@@ -172,11 +183,11 @@ class _App:
     def _act(self, mode):
         names = [name for name in ORDER if name in self.marked]
         if not names:
-            self.message = "nothing marked"
+            self._notice("nothing marked")
             return
         steps = plan_apply(names, self.probe) if mode == "apply" else plan_remove(names, self.probe)
         if steps and all(step.kind == "skip" for step in steps):
-            self.message = steps[0].detail
+            self._notice(steps[0].detail)
             return
         if any(step.sudo for step in steps) and not self._ensure_root():
             return
@@ -204,17 +215,17 @@ class _App:
             print(f"  {label}")
         answer = input("Proceed? [y/N] ")
         if answer.strip().lower() != "y":
-            self.message = "cancelled"
+            self._notice("cancelled")
             return
         result = execute(steps, live_run, self.log)
         if not result.ok:
             print(result.detail)
-            self.message = result.detail or "stopped"
+            self._notice(result.detail or "stopped")
             input("Press Enter to return.")
             return
         if not rebuilds:
             print("Done. No reboot is needed for this change.")
-            self.message = "done"
+            self._notice("done")
             input("Press Enter to return.")
             return
         print()
@@ -223,17 +234,17 @@ class _App:
         choice = input("Reboot now? [y/N] ")
         if choice.strip().lower() != "y":
             print("Left running. Reboot by hand.")
-            self.message = "done. reboot by hand when you are ready"
+            self._notice("done. reboot by hand when you are ready")
             input("Press Enter to return.")
             return
         import subprocess
         rc = subprocess.run(["sudo", "systemctl", "reboot"]).returncode
         if rc != 0:
             print("Reboot did not start. Reboot by hand.")
-            self.message = "reboot did not start. reboot by hand"
+            self._notice("reboot did not start. reboot by hand")
             input("Press Enter to return.")
             return
-        self.message = "rebooting"
+        self._notice("rebooting")
 
     def _read_boot_image(self):
         if not self._ensure_root():
@@ -253,9 +264,9 @@ class _App:
             if answer.strip().lower() == "y":
                 rc = live_run(_dep_step(self.deps))
                 self.log.record("deps", " ".join(self.deps) if rc == 0 else "failed")
-                self.message = "dependencies installed" if rc == 0 else "dependency install failed"
+                self._notice("dependencies installed" if rc == 0 else "dependency install failed")
             else:
-                self.message = "cancelled"
+                self._notice("cancelled")
         finally:
             curses.reset_prog_mode()
         self.rescan()
@@ -267,7 +278,7 @@ class _App:
         self.auth_line = ""
         secret = self._ask_secret()
         if not secret:
-            self.message = "root authentication cancelled"
+            self._notice("root authentication cancelled")
             return False
         self._show_auth("checking")
         result = cache_root(secret, _sudo_stdin)
@@ -275,7 +286,6 @@ class _App:
             self._show_auth("accepted")
             return True
         self._show_auth("rejected")
-        self.message = "root password rejected"
         return False
 
     def _show_auth(self, phase):
@@ -464,9 +474,33 @@ def banner_lines(kernel, age, version=None, built=None):
 
 
 def description_message(text):
-    if text == "authenticated as root":
+    return ""
+
+
+def notice_line(text):
+    if text in ("", "scanned", "authenticated as root", "root password rejected"):
         return ""
     return text
+
+
+def kept_notice(previous, scanning):
+    if not previous or previous == scanning:
+        return ""
+    return previous
+
+
+def paint_first_scan(stdscr):
+    text = scan_notice(True)
+    _height, width = stdscr.getmaxyx()
+    stdscr.erase()
+    stdscr.addnstr(1, 2, text, max(0, width - 4))
+    stdscr.refresh()
+
+
+def scan_notice(running):
+    if running:
+        return "Scanning."
+    return ""
 
 
 def footer_line():
