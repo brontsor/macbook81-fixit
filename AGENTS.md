@@ -16,7 +16,14 @@ reboots only if you say yes.
 - The boot image path follows the running kernel package, the way `limine-mkinitcpio` names it. Do not hardcode a filename.
 - Do not write `/sys/power/mem_sleep`.
 - Do not restart WirePlumber while something is playing. The equalizer's
-  own stream is not that something.
+  own stream is not that something. Recheck at the last step, not when
+  the list is built. Quitting the player when the warning appears is in
+  time. A boot-image rebuild still asks to reboot if that step finds
+  something playing. Do not leave that warning as the notice for a
+  rebuild that already ran.
+- A row whose files are gone, while this boot still has the effect, is
+  not-rebooted. It is not not-installed, and it is not partial. Speaker
+  names left behind are not-restarted. A reboot does not clear those names.
 - Do not install beside `macbook12-audio`. Do not remove
   `macbook12-spi-driver`.
 - Do not vendor the Apple camera package or the extracted firmware.

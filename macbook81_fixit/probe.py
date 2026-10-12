@@ -94,6 +94,13 @@ class SystemProbe:
     def cmdline_has(self, token):
         return token in _read("/proc/cmdline")
 
+    def out_of_tree(self, name):
+        return "O" in _read(f"/sys/module/{name}/taint")
+
+    def forget_boot_image(self):
+        if hasattr(self, "_uki_cache"):
+            del self._uki_cache
+
     def module_path(self, name):
         code, out = _run(["modinfo", "-n", name])
         return out.strip() if code == 0 else ""

@@ -83,9 +83,11 @@ def _wrote(steps):
 
 
 def _wireplumber_tail(probe):
-    if probe.playing():
-        return [Step([], kind="wait", detail="WirePlumber restart waits until nothing is playing")]
-    return [Step(["systemctl", "--user", "restart", "wireplumber"])]
+    return [Step(
+        ["systemctl", "--user", "restart", "wireplumber"],
+        kind="wireplumber",
+        detail="Quit anything playing before this step. Quitting when you see this is in time.",
+    )]
 
 
 def _apply_one(name, probe):

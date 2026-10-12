@@ -117,6 +117,9 @@ def keyboard_status(probe):
             f"the drop-in is on disk but the boot image does not contain {TOKEN}",
             note,
         )
+    running = _removed_not_rebooted(probe, TOKEN, note)
+    if running:
+        return running
     return Report("not-installed", "", note)
 
 
@@ -143,6 +146,11 @@ def audio_status(probe):
         )
     if dkms_ok or jack is not None or unit_ok:
         return Report("partial", "the driver or the jack watcher is only partly installed")
+    if _out_of_tree(probe, "snd_hda_codec_cs420x"):
+        return Report(
+            "not-rebooted",
+            "removed, not rebooted. The speaker driver is still loaded. A reboot unloads it.",
+        )
     return Report("not-installed")
 
 
@@ -157,6 +165,12 @@ def speaker_status(probe):
         return Report(
             "partial",
             "the files are on disk but a node is still named CS4208 Analog",
+            EQ_NOTE,
+        )
+    if not files and named:
+        return Report(
+            "not-restarted",
+            "removed. The names stay until WirePlumber restarts. A reboot does not clear them.",
             EQ_NOTE,
         )
     if files or named:
@@ -181,7 +195,14 @@ def sleep_status(probe):
             extra = " The running command line has the token."
         return Report("partial", err.rstrip(".") + "." + extra, SLEEP_NOTE)
     if limine or systemd or uki:
+        if not limine and not systemd:
+            running = _removed_not_rebooted(probe, SLEEP_TOKEN, SLEEP_NOTE)
+            if running:
+                return running
         return Report("partial", "the s2idle default is only partly installed", SLEEP_NOTE)
+    running = _removed_not_rebooted(probe, SLEEP_TOKEN, SLEEP_NOTE)
+    if running:
+        return running
     return Report("not-installed", "", SLEEP_NOTE)
 
 
@@ -278,6 +299,28 @@ def _cmdline_has(probe, token):
     return fn(token) if fn else False
 
 
+def _out_of_tree(probe, name):
+    fn = getattr(probe, "out_of_tree", None)
+    return bool(fn(name)) if fn else False
+
+
+def _removed_not_rebooted(probe, token, note):
+    if not _cmdline_has(probe, token):
+        return None
+    if probe.uki_has(token) and not _uki_error(probe):
+        return Report(
+            "partial",
+            "the file is gone, but the boot image still has the token. A reboot will not remove it.",
+            note,
+        )
+    detail = "removed, not rebooted. This boot still has the token."
+    if _uki_error(probe):
+        detail += " The boot image was not read."
+    else:
+        detail += " A reboot finishes the remove."
+    return Report("not-rebooted", detail, note)
+
+
 def webcam_status(probe):
     kernel = probe.kernel_release()
     dkms_ok = _dkms_installed(probe.dkms_status(), "facetimehd", "0.7.2", kernel)
@@ -285,9 +328,21 @@ def webcam_status(probe):
     video = probe.exists(VIDEO)
     if dkms_ok and firmware and video:
         return Report("installed", "facetimehd/0.7.2", WEBCAM_NOTE)
+    if not firmware and dkms_ok:
+        return Report(
+            "partial",
+            "firmware is missing. A kext without it is not a working camera.",
+            WEBCAM_NOTE,
+        )
+    if not firmware and (video or _out_of_tree(probe, "facetimehd")):
+        return Report(
+            "not-rebooted",
+            "removed, not rebooted. The camera is still open on this boot.",
+            WEBCAM_NOTE,
+        )
     if not firmware:
         return Report(
-            "partial" if dkms_ok or video else "not-installed",
+            "not-installed",
             "firmware is missing. A kext without it is not a working camera.",
             WEBCAM_NOTE,
         )

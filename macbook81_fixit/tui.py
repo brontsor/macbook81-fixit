@@ -47,6 +47,9 @@ class _App:
         self.rescan()
 
     def rescan(self):
+        forget = getattr(self.probe, "forget_boot_image", None)
+        if forget:
+            forget()
         kept = kept_notice(self.auth_line, scan_notice(True))
         self._show_scanning()
         self.rows = scan(self.probe)
@@ -222,41 +225,43 @@ class _App:
             print("You can reboot by hand, or this screen can reboot for you at the end.")
         else:
             print("This change does not need a reboot.")
-        for step in steps:
-            label = " ".join(step.argv) or step.detail
-            print(f"  {label}")
+        for line in confirm_lines(steps):
+            print(f"  {line}")
         answer = input("Proceed? [y/N] ")
         if answer.strip().lower() != "y":
             self._notice("cancelled")
             return
         result = execute(steps, live_run, self.log)
-        if not result.ok:
+        outcome = after_run(result)
+        if outcome == "reboot":
+            if result.detail:
+                print(result.detail)
+            print()
+            print("The boot image was rebuilt.")
+            print("Reboot by hand when you are ready, then run this again.")
+            choice = input("Reboot now? [y/N] ")
+            if choice.strip().lower() != "y":
+                print("Left running. Reboot by hand.")
+                self._notice("done. reboot by hand when you are ready")
+                input("Press Enter to return.")
+                return
+            import subprocess
+            rc = subprocess.run(["sudo", "systemctl", "reboot"]).returncode
+            if rc != 0:
+                print("Reboot did not start. Reboot by hand.")
+                self._notice("reboot did not start. reboot by hand")
+                input("Press Enter to return.")
+                return
+            self._notice("rebooting")
+            return
+        if outcome == "stop":
             print(result.detail)
             self._notice(result.detail or "stopped")
             input("Press Enter to return.")
             return
-        if not rebuilds:
-            print("Done. No reboot is needed for this change.")
-            self._notice("done")
-            input("Press Enter to return.")
-            return
-        print()
-        print("The boot image was rebuilt.")
-        print("Reboot by hand when you are ready, then run this again.")
-        choice = input("Reboot now? [y/N] ")
-        if choice.strip().lower() != "y":
-            print("Left running. Reboot by hand.")
-            self._notice("done. reboot by hand when you are ready")
-            input("Press Enter to return.")
-            return
-        import subprocess
-        rc = subprocess.run(["sudo", "systemctl", "reboot"]).returncode
-        if rc != 0:
-            print("Reboot did not start. Reboot by hand.")
-            self._notice("reboot did not start. reboot by hand")
-            input("Press Enter to return.")
-            return
-        self._notice("rebooting")
+        print("Done. No reboot is needed for this change.")
+        self._notice("done")
+        input("Press Enter to return.")
 
     def _read_boot_image(self):
         if not self._ensure_root():
@@ -399,6 +404,23 @@ def row_text(name, title, status, marked):
 
 def needs_reboot(steps):
     return any(step.argv[:1] == ["limine-mkinitcpio"] for step in steps)
+
+
+def confirm_lines(steps):
+    lines = []
+    for step in steps:
+        lines.append(" ".join(step.argv) or step.detail)
+        if step.kind == "wireplumber" and step.detail:
+            lines.append(step.detail)
+    return lines
+
+
+def after_run(result):
+    if getattr(result, "rebuilt", False):
+        return "reboot"
+    if not result.ok:
+        return "stop"
+    return "done"
 
 
 def boot_image_state(probe):
@@ -627,7 +649,7 @@ def _pair(number):
 
 
 def _status_color(status):
-    return {"installed": 1, "partial": 2, "blocked": 3}.get(status, 0)
+    return {"installed": 1, "partial": 2, "blocked": 3, "not-rebooted": 2, "not-restarted": 2}.get(status, 0)
 
 
 def _banner(stdscr, width, kernel, age):

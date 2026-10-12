@@ -10,6 +10,8 @@ def live_run(step):
         return _edit_version(step.cwd)
     if step.kind == "write":
         return _write_root(step.argv[-1], step.detail)
+    if step.kind == "wireplumber":
+        return _wireplumber(step)
     if step.argv[:2] == ["git", "clone"]:
         return _clone(step.argv[2], step.argv[3])
     argv = list(step.argv)
@@ -22,6 +24,17 @@ def live_run(step):
     env = os.environ.copy()
     env.update(step.env)
     return _dkms_rc(step.argv, subprocess.run(argv, cwd=step.cwd, env=env).returncode)
+
+
+def _wireplumber(step):
+    from macbook81_fixit.probe import SystemProbe
+
+    if SystemProbe().playing():
+        print("Something is still playing.")
+        print("Quit it, then restart WirePlumber, or run this again.")
+        print("Quitting the player before this step is in time.")
+        return 2
+    return subprocess.run(step.argv, cwd=step.cwd).returncode
 
 
 def _confirm_dkms(spec):

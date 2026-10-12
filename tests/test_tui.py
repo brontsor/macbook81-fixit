@@ -13,6 +13,8 @@ from macbook81_fixit.tui import (
     frame_style,
     license_line,
     needs_reboot,
+    after_run,
+    confirm_lines,
     prompt_rows,
     row_text,
     title_line,
@@ -299,3 +301,21 @@ class TestScreen(unittest.TestCase):
         steps = [Step(["limine-mkinitcpio"], sudo=True)]
         self.assertTrue(needs_reboot(steps))
         self.assertFalse(needs_reboot([Step(["bash", "apply.sh"])]))
+
+    def test_a_rebuild_still_asks_to_reboot_when_wireplumber_is_still_playing(self):
+        from macbook81_fixit.execute import Result
+
+        playing = Result(True, "WirePlumber was not restarted. Something is still playing.", rebuilt=True)
+        self.assertEqual(after_run(playing), "reboot")
+        self.assertEqual(after_run(Result(False, "stopped")), "stop")
+        self.assertEqual(after_run(Result(True, "")), "done")
+
+    def test_the_warning_says_quitting_now_is_in_time(self):
+        step = Step(
+            ["systemctl", "--user", "restart", "wireplumber"],
+            kind="wireplumber",
+            detail="Quit anything playing before this step. Quitting when you see this is in time.",
+        )
+        lines = confirm_lines([step])
+        self.assertIn("in time", lines[1])
+        self.assertIn("restart", lines[0])

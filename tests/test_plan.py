@@ -39,13 +39,16 @@ class TestPlan(unittest.TestCase):
         self.assertNotIn("limine-update", blob)
         self.assertNotIn("/sys/power/mem_sleep", blob)
 
-    def test_speaker_apply_waits_instead_of_restarting_wireplumber_while_playing(self):
+    def test_a_player_quit_when_the_warning_appears_is_in_time(self):
         probe = Fake()
         probe._playing = True
         steps = plan_apply(["speaker"], probe)
         blob = " ".join(" ".join(step.argv) for step in steps)
-        self.assertNotIn("restart", blob)
-        self.assertTrue(any(step.kind == "wait" for step in steps))
+        self.assertNotIn("wait", [step.kind for step in steps])
+        tail = [step for step in steps if step.kind == "wireplumber"]
+        self.assertEqual(len(tail), 1)
+        self.assertIn("in time", tail[0].detail)
+        self.assertIn("restart", blob)
 
     def test_audio_apply_skips_its_own_rebuild_and_does_not_copy_the_profile(self):
         steps = plan_apply(["audio"], Fake())

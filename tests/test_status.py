@@ -35,6 +35,9 @@ class Fake:
         self._home = "/home/owner"
         self.foreign = []
         self.module = ""
+        self.cmdline = ""
+        self.tainted = set()
+        self.err = ""
 
     def read(self, path):
         return self.files.get(path)
@@ -72,6 +75,15 @@ class Fake:
     def foreign_sleep(self):
         return getattr(self, "foreign", [])
 
+    def cmdline_has(self, token):
+        return token in getattr(self, "cmdline", "")
+
+    def out_of_tree(self, name):
+        return name in getattr(self, "tainted", set())
+
+    def uki_error(self):
+        return getattr(self, "err", "")
+
 
 class TestKeyboardStatus(unittest.TestCase):
     def test_dropin_without_uki_token_is_partial(self):
@@ -101,6 +113,22 @@ class TestKeyboardStatus(unittest.TestCase):
         self.assertNotIn("present and unrelated", report.note)
         self.assertIn("will not remove", report.note)
 
+    def test_a_removed_token_still_in_this_boot_is_not_rebooted(self):
+        probe = Fake()
+        probe.cmdline = TOKEN
+        report = keyboard_status(probe)
+        self.assertEqual(report.status, "not-rebooted")
+        self.assertIn("removed, not rebooted", report.detail)
+        self.assertIn("reboot finishes", report.detail)
+
+    def test_a_removed_token_still_in_the_boot_image_is_not_called_not_rebooted(self):
+        probe = Fake()
+        probe.cmdline = TOKEN
+        probe.uki = TOKEN
+        report = keyboard_status(probe)
+        self.assertEqual(report.status, "partial")
+        self.assertIn("will not remove", report.detail)
+
 
 class TestAudioStatus(unittest.TestCase):
     def test_added_is_not_installed_for_the_running_kernel(self):
@@ -129,6 +157,13 @@ class TestAudioStatus(unittest.TestCase):
         report = audio_status(probe)
         self.assertNotEqual(report.status, "installed")
 
+    def test_a_loaded_out_of_tree_driver_with_the_files_gone_is_not_rebooted(self):
+        probe = Fake()
+        probe.tainted.add("snd_hda_codec_cs420x")
+        report = audio_status(probe)
+        self.assertEqual(report.status, "not-rebooted")
+        self.assertIn("removed, not rebooted", report.detail)
+
 
 class TestSpeakerStatus(unittest.TestCase):
     def test_files_with_old_nick_are_partial(self):
@@ -148,6 +183,14 @@ class TestSpeakerStatus(unittest.TestCase):
         report = speaker_status(probe)
         self.assertEqual(report.status, "installed")
         self.assertIn("not measured", report.note.lower())
+
+    def test_names_left_after_the_files_are_gone_are_not_restarted(self):
+        probe = Fake()
+        probe.nicks = "Headphones\nInternal Microphone\nSpeaker (Raw)\n"
+        report = speaker_status(probe)
+        self.assertEqual(report.status, "not-restarted")
+        self.assertIn("WirePlumber", report.detail)
+        self.assertIn("reboot does not", report.detail.lower())
 
 
 class TestSleepStatus(unittest.TestCase):
@@ -184,6 +227,14 @@ class TestSleepStatus(unittest.TestCase):
         self.assertEqual(report.status, "blocked")
         self.assertIn("macbook81-applespi", report.detail)
         self.assertIn("will not install", report.detail)
+
+    def test_files_gone_while_this_boot_still_has_the_token_is_not_rebooted(self):
+        probe = Fake()
+        probe.cmdline = "mem_sleep_default=s2idle"
+        probe.mem_sleep = "[s2idle] deep"
+        report = sleep_status(probe)
+        self.assertEqual(report.status, "not-rebooted")
+        self.assertIn("removed, not rebooted", report.detail)
 
 
 class TestForeignSleepListing(unittest.TestCase):
@@ -232,6 +283,13 @@ class TestWebcamStatus(unittest.TestCase):
         report = webcam_status(probe)
         self.assertEqual(report.status, "installed")
         self.assertIn("patjak/facetimehd", report.note)
+
+    def test_a_camera_still_open_after_the_files_are_gone_is_not_rebooted(self):
+        probe = Fake()
+        probe.files[VIDEO] = ""
+        report = webcam_status(probe)
+        self.assertEqual(report.status, "not-rebooted")
+        self.assertIn("removed, not rebooted", report.detail)
 
 
 def _audio_ready():
