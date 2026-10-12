@@ -109,7 +109,7 @@ Two boot fixes, the keyboard and the sleep default, live in the boot image. Read
 
 ### Reboot and the boot image
 
-This machine boots a Limine UKI, which is the boot image. If an install changes a boot file, the program rebuilds that image once, with `limine-mkinitcpio`, after the other writes. It does not run `limine-update`. It then asks if you want to reboot. It reboots only if you say yes. You can always reboot by hand instead.
+This machine boots a Limine UKI, which is the boot image. The name follows the running kernel package. Stable, Edge, and dev do not share one filename. If an install changes a boot file, the program rebuilds that image once, with `limine-mkinitcpio`, after the other writes. It does not run `limine-update`. It then asks if you want to reboot. It reboots only if you say yes. You can always reboot by hand instead.
 
 ### Webcam firmware
 
@@ -130,6 +130,11 @@ This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are
 ## Changes
 
 The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
+
+### Unreleased
+
+- The boot image name follows the running kernel package. Stable, Edge, and dev do not share one filename. If that file is missing, the screen reads the file this boot started from.
+- The audio pin is `37ef61a`. A failed DKMS install is not applied. The boot image is not rebuilt until that confirm succeeds.
 
 ### [v0.1.2](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.2)
 

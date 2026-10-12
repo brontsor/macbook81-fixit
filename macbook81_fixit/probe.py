@@ -2,7 +2,14 @@ import os
 import shutil
 import subprocess
 
-UKI = "/boot/EFI/Linux/omarchy_linux-omarchy.efi"
+from macbook81_fixit.bootimage import (
+    ESP_CANDIDATES,
+    config_paths,
+    loader_path,
+    package_name,
+    paths_to_try,
+    resolve_boot_image,
+)
 
 
 class SystemProbe:
@@ -136,8 +143,49 @@ class SystemProbe:
 
     def _uki_state(self):
         if not hasattr(self, "_uki_cache"):
-            self._uki_cache = _uki_state()
+            self._uki_cache = self._read_boot_image()
         return self._uki_cache
+
+    def _read_boot_image(self):
+        paths = paths_to_try(self._constructed_image(), self._loader_image())
+        if not paths:
+            return "", "boot image missing: unresolved"
+        for path in paths:
+            text, err = _read_image(path)
+            if not err:
+                return text, ""
+            if "not readable" in err:
+                return text, err
+        return "", f"boot image missing: {paths[0]}"
+
+    def _constructed_image(self):
+        release = self.kernel_release()
+        builtin = f"/usr/lib/modules/{release}/modules.builtin"
+        code, out = _run(["pacman", "-Qqo", builtin])
+        package = package_name(code, out, _read(f"/usr/lib/modules/{release}/pkgbase"))
+        configs = []
+        for path in config_paths():
+            text = self.read(path)
+            if text:
+                configs.append(text)
+        return resolve_boot_image(
+            configs,
+            package,
+            _read("/etc/machine-id"),
+            self._esp_mounts(),
+        )
+
+    def _esp_mounts(self):
+        mounts = {}
+        for path in ESP_CANDIDATES:
+            code, out = _run(["findmnt", "-no", "FSTYPE", path])
+            if code == 0 and out.strip():
+                mounts[path] = out.strip()
+        return mounts
+
+    def _loader_image(self):
+        _code, out = _run(["bootctl", "status"])
+        return loader_path(out)
 
     def pacman_version(self, package):
         code, out = _run(["pacman", "-Q", package])
@@ -176,14 +224,16 @@ def _run(argv):
     return proc.returncode, proc.stdout + proc.stderr
 
 
-def _uki_state():
-    if os.path.isfile(UKI) and os.access(UKI, os.R_OK):
-        return _run(["strings", UKI])[1], ""
+def _read_image(path):
+    if not path:
+        return "", "boot image missing: unresolved"
+    if os.path.isfile(path) and os.access(path, os.R_OK):
+        return _run(["strings", path])[1], ""
     if _run(["sudo", "-n", "true"])[0] != 0:
         return "", "the boot image is not readable without a password"
-    if _run(["sudo", "-n", "test", "-f", UKI])[0] != 0:
-        return "", f"boot image missing: {UKI}"
-    code, out = _run(["sudo", "-n", "strings", UKI])
+    if _run(["sudo", "-n", "test", "-f", path])[0] != 0:
+        return "", f"boot image missing: {path}"
+    code, out = _run(["sudo", "-n", "strings", path])
     if code == 0:
         return out, ""
     return "", "the boot image is not readable without a password"
