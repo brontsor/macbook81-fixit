@@ -16,12 +16,12 @@ These are the commits the installer checks out.
 | --- | --- | --- |
 | Keyboard | `brontsor/macbook81-spi-pio` | `930eceb20dd27aa8367048c114f2535f2ff04281` |
 | Sleep | `brontsor/macbook81-s2idle-default` | `adbc9f4f0de885ce47d29a6b44e56831be07558a` |
-| Audio driver | `brontsor/macbook81-cs4208` | `3dcc9ef23e852a17a872587bcd1ade2a25c1d064` |
+| Audio driver | `brontsor/macbook81-cs4208` | `b90beed8c1dd0af2e588fe73b064f276d00d6a66` |
 | Speaker profile | `brontsor/macbook81-audio-profile` | `10794e14e9cf9cfb82ccfe81983dd0c6095629da` |
 | Webcam driver | `patjak/facetimehd` | `54fb8f25fcf76d4d5af682875f044dc0b6fa0b65` |
 | Webcam firmware script | `patjak/facetimehd-firmware` | `60ee21228d9ca00a7bd84fdaefaff00a81f1db91` |
 
-`macbook81-cs4208` tag `v0.1.1` is a README correction. It is not the installer pin. The webcam short name `0.7.2` is the tag on that commit. `dkms.conf` at that tag still says `0.7.0.1`. The installer sets the package version to the tag in the clone. It does not commit that edit upstream.
+`macbook81-cs4208` tag `v0.1.1` is a README correction. It is not the installer pin. The pin is the build-failure fix: a missing wget is not a missing tarball, and DONE is printed only when `dkms status` says installed for the running kernel. The webcam short name `0.7.2` is the tag on that commit. `dkms.conf` at that tag still says `0.7.0.1`. The installer sets the package version to the tag in the clone. It does not commit that edit upstream.
 
 Bluetooth and Wi-Fi have no pin. This program does not install either.
 

@@ -3,7 +3,7 @@
 PIN = {
     "keyboard": "930eceb20dd27aa8367048c114f2535f2ff04281",
     "sleep": "adbc9f4f0de885ce47d29a6b44e56831be07558a",
-    "audio": "3dcc9ef23e852a17a872587bcd1ade2a25c1d064",
+    "audio": "b90beed8c1dd0af2e588fe73b064f276d00d6a66",
     "speaker": "10794e14e9cf9cfb82ccfe81983dd0c6095629da",
     "webcam": "54fb8f25fcf76d4d5af682875f044dc0b6fa0b65",
     "firmware": "60ee21228d9ca00a7bd84fdaefaff00a81f1db91",
@@ -42,7 +42,7 @@ APPLE_RANGES = (
 SHORT = {
     "keyboard": "930eceb",
     "sleep": "adbc9f4",
-    "audio": "3dcc9ef",
+    "audio": "b90beed",
     "speaker": "10794e1",
     "webcam": "0.7.2",
 }
