@@ -140,6 +140,11 @@ def _apply_one(name, probe):
             cwd=dest,
             env={"MB81_SKIP_INITRAMFS": "1"},
         ))
+        steps.append(Step(
+            ["macbook81-cs4208/0.1"],
+            kind="confirm-dkms",
+            detail="macbook81-cs4208/0.1 is not installed for the running kernel",
+        ))
         return steps
     if name == "webcam":
         dest = _src(probe, "webcam")

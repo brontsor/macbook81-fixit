@@ -1,6 +1,7 @@
 import unittest
 
 from macbook81_fixit.status import (
+    _dkms_installed,
     audio_status,
     foreign_from_listing,
     keyboard_status,
@@ -102,6 +103,13 @@ class TestKeyboardStatus(unittest.TestCase):
 
 
 class TestAudioStatus(unittest.TestCase):
+    def test_added_is_not_installed_for_the_running_kernel(self):
+        added = "macbook81-cs4208/0.1: added\n"
+        installed = "macbook81-cs4208/0.1, 7.2.8-5-omarchy-bore, x86_64: installed\n"
+        self.assertFalse(_dkms_installed(added, "macbook81-cs4208", "0.1", "7.2.8-5-omarchy-bore"))
+        self.assertTrue(_dkms_installed(installed, "macbook81-cs4208", "0.1", "7.2.8-5-omarchy-bore"))
+        self.assertFalse(_dkms_installed(installed, "macbook81-cs4208", "0.1", "7.2.5-4-omarchy"))
+
     def test_macbook12_audio_blocks_the_row(self):
         probe = Fake()
         probe.dkms = "macbook12-audio/0.1, 7.2.5-4-omarchy, x86_64: installed\n"

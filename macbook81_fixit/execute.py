@@ -18,5 +18,7 @@ def execute(steps, run, log=None):
         if log is not None:
             log.record("run" if rc == 0 else "fail", " ".join(step.argv) or step.detail)
         if rc != 0:
+            if step.kind == "confirm-dkms":
+                return Result(False, step.detail)
             return Result(False, " ".join(step.argv) or step.detail)
     return Result(True, "")

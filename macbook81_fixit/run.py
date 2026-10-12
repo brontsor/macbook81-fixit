@@ -4,6 +4,8 @@ import subprocess
 
 
 def live_run(step):
+    if step.kind == "confirm-dkms":
+        return _confirm_dkms(step.argv[0])
     if step.kind == "edit":
         return _edit_version(step.cwd)
     if step.kind == "write":
@@ -20,6 +22,27 @@ def live_run(step):
     env = os.environ.copy()
     env.update(step.env)
     return _dkms_rc(step.argv, subprocess.run(argv, cwd=step.cwd, env=env).returncode)
+
+
+def _confirm_dkms(spec):
+    from macbook81_fixit.status import _dkms_installed
+    package, version = spec.split("/", 1)
+    kernel = os.uname().release
+    try:
+        text = subprocess.run(
+            ["dkms", "status"], capture_output=True, text=True
+        ).stdout
+    except FileNotFoundError:
+        print("dkms is not installed")
+        return 1
+    if _dkms_installed(text, package, version, kernel):
+        return 0
+    print(f"{spec} is not installed for {kernel}")
+    if text.strip():
+        print(text.rstrip())
+    else:
+        print("dkms status is empty")
+    return 1
 
 
 def _dkms_rc(argv, rc):

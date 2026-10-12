@@ -54,6 +54,16 @@ class TestPlan(unittest.TestCase):
         self.assertNotIn("51-macbook81-speaker.conf", blob)
         self.assertNotIn("51-mb81-rawpcm-speaker.conf", blob)
 
+    def test_audio_apply_confirms_dkms_before_the_boot_image(self):
+        steps = plan_apply(["audio"], Fake())
+        confirm = [i for i, step in enumerate(steps) if step.kind == "confirm-dkms"]
+        install = [i for i, step in enumerate(steps) if step.argv[:2] == ["bash", "install.sh"]]
+        rebuild = [i for i, step in enumerate(steps) if step.argv[:1] == ["limine-mkinitcpio"]]
+        self.assertEqual(confirm, [install[0] + 1])
+        self.assertEqual(steps[confirm[0]].argv, ["macbook81-cs4208/0.1"])
+        self.assertIn("not installed", steps[confirm[0]].detail)
+        self.assertLess(confirm[0], rebuild[0])
+
     def test_webcam_apply_uses_the_upstream_firmware_script(self):
         steps = plan_apply(["webcam"], Fake())
         blob = " ".join(" ".join(step.argv) + " " + step.detail for step in steps)
