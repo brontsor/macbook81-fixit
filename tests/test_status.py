@@ -189,6 +189,7 @@ class TestSpeakerStatus(unittest.TestCase):
         probe.nicks = "Headphones\nInternal Microphone\nSpeaker (Raw)\n"
         report = speaker_status(probe)
         self.assertEqual(report.status, "not-restarted")
+        self.assertIn("removed, not restarted", report.detail)
         self.assertIn("WirePlumber", report.detail)
         self.assertIn("reboot does not", report.detail.lower())
 

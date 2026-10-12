@@ -56,6 +56,13 @@ class TestScreen(unittest.TestCase):
         self.assertIn("Audio driver", line)
         self.assertNotIn("uki", line.lower())
 
+    def test_not_rebooted_and_not_restarted_share_the_license_column(self):
+        rebooted = row_text("audio", "Audio driver", "not-rebooted", False)
+        restarted = row_text("speaker", "Speaker names", "not-restarted", False)
+        installed = row_text("audio", "Audio driver", "not-installed", False)
+        self.assertEqual(rebooted.index("GPL-2.0-or-later"), restarted.index("MIT"))
+        self.assertEqual(rebooted.index("GPL-2.0-or-later"), installed.index("GPL-2.0-or-later"))
+
     def test_the_border_covers_every_column(self):
         self.assertEqual(len(border_edge(80, "X")), 80)
         self.assertEqual(border_edge(80, "X"), "X" * 80)

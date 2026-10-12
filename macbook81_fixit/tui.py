@@ -135,7 +135,7 @@ class _App:
         if self.deps:
             self.stdscr.addnstr(y, left, "missing: " + ", ".join(self.deps) + "   [d] install", span)
             y += 1
-        header = f"{'':3} {'Patch':<22} {'Status':<12} {'License':<18} Version"
+        header = f"{'':3} {'Patch':<22} {'Status':<{STATUS_WIDTH}} {'License':<18} Version"
         self.stdscr.addnstr(y, left, header, span, _pair(4))
         y = first_catalog_row(bool(self.deps))
         for index, (name, title, report) in enumerate(self.rows):
@@ -396,10 +396,14 @@ def _sudo_stdin(argv, text):
     return proc.returncode
 
 
+# not-restarted and not-installed are 13. A 12-wide field shifts that row only.
+STATUS_WIDTH = 13
+
+
 def row_text(name, title, status, marked):
     mark = "[x]" if marked else "[ ]"
     license_name = catalog.LICENSE.get(name, ("", ""))[0]
-    return f"{mark} {title:<22} {status:<12} {license_name:<18} {catalog.SHORT[name]}"
+    return f"{mark} {title:<22} {status:<{STATUS_WIDTH}} {license_name:<18} {catalog.SHORT[name]}"
 
 
 def needs_reboot(steps):
