@@ -190,8 +190,9 @@ class TestSpeakerStatus(unittest.TestCase):
         report = speaker_status(probe)
         self.assertEqual(report.status, "not-restarted")
         self.assertIn("removed, not restarted", report.detail)
-        self.assertIn("WirePlumber", report.detail)
-        self.assertIn("reboot does not", report.detail.lower())
+        self.assertIn("WirePlumber process", report.detail)
+        self.assertIn("not the machine", report.detail)
+        self.assertNotIn("reboot does not", report.detail.lower())
 
 
 class TestSleepStatus(unittest.TestCase):

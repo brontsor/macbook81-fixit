@@ -170,7 +170,7 @@ def speaker_status(probe):
     if not files and named:
         return Report(
             "not-restarted",
-            "removed, not restarted. The names stay until WirePlumber restarts. A reboot does not clear them.",
+            "removed, not restarted. Restart means the WirePlumber process, not the machine.",
             EQ_NOTE,
         )
     if files or named:

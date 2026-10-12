@@ -23,7 +23,8 @@ reboots only if you say yes.
   rebuild that already ran.
 - A row whose files are gone, while this boot still has the effect, is
   not-rebooted. It is not not-installed, and it is not partial. Speaker
-  names left behind are not-restarted. A reboot does not clear those names.
+  names left behind are not-restarted. Restart means the WirePlumber
+  process, not the machine.
 - Do not install beside `macbook12-audio`. Do not remove
   `macbook12-spi-driver`.
 - Do not vendor the Apple camera package or the extracted firmware.
