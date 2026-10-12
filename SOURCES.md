@@ -16,7 +16,7 @@ These are the commits the installer checks out.
 | --- | --- | --- |
 | Keyboard | `brontsor/macbook81-spi-pio` | `930eceb20dd27aa8367048c114f2535f2ff04281` |
 | Sleep | `brontsor/macbook81-s2idle-default` | `adbc9f4f0de885ce47d29a6b44e56831be07558a` |
-| Audio driver | `brontsor/macbook81-cs4208` | `b90beed8c1dd0af2e588fe73b064f276d00d6a66` |
+| Audio driver | `brontsor/macbook81-cs4208` | `37ef61a3604b34c08aa54f7cac7d20bbaa27c70a` |
 | Speaker profile | `brontsor/macbook81-audio-profile` | `10794e14e9cf9cfb82ccfe81983dd0c6095629da` |
 | Webcam driver | `patjak/facetimehd` | `54fb8f25fcf76d4d5af682875f044dc0b6fa0b65` |
 | Webcam firmware script | `patjak/facetimehd-firmware` | `60ee21228d9ca00a7bd84fdaefaff00a81f1db91` |
