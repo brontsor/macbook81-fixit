@@ -11,7 +11,7 @@ reboots only if you say yes.
 - The screen may read the serial to show computer age and the manufacture date. Do not log either, print the serial, or put the date or the serial in `--check`. Do not read a board serial or a battery date.
 - `macbook12-spi-driver` at DKMS `added` is not installed. Say so.
   Do not call it the keyboard fix. Do not remove it unless asked.
-- Pins live in `catalog.py`. Do not float them to a branch tip.
+- Pins live in `catalog.py`. Do not float them to a branch tip. `SOURCES.md` lists the versions, gists, and forks. It is not the patch pre-check. Do not install a listed file just because it is listed.
 - One `limine-mkinitcpio` after the writes. Never `limine-update`.
 - Do not write `/sys/power/mem_sleep`.
 - Do not restart WirePlumber while something is playing. The equalizer's

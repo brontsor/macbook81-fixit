@@ -144,4 +144,4 @@ The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
 ### For agents
 
-Read `AGENTS.md` before changing this tree.
+Read `AGENTS.md` before changing this tree. `SOURCES.md` is the list of versions, gists, and forks. It is not the patch pre-check.
