@@ -101,8 +101,9 @@ The status on each row is read from the machine, not from a log.
 | Status | Meaning |
 |---|---|
 | installed | The live check matches |
+| partial* | The file is present. The boot image has not been read. Press u |
 | partial | A file is present, but the boot image or the running check does not match yet |
-| not-rebooted | The files are gone. This boot still has the effect. A reboot finishes the remove |
+| not-rebooted | This boot still has the old effect. The files may be gone, or the new package may be on disk while the old driver is still loaded. A reboot finishes it |
 | not-restarted | The speaker files are gone. The names stay until the WirePlumber process restarts. Restart means that process, not the machine |
 | not-installed | Not present on disk, and not still running on this boot |
 | blocked | Something else is in the way. The program will not install over it |
@@ -138,7 +139,8 @@ The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 ### Unreleased
 
 - The boot image name follows the running kernel package. Stable, Edge, and dev do not share one filename. If that file is missing, the screen reads the file this boot started from.
-- A row whose files are gone, while this boot still has the effect, says not-rebooted. It does not say not-installed. Speaker names left behind say not-restarted. Restart means the WirePlumber process, not the machine.
+- A row whose files are gone, while this boot still has the effect, says not-rebooted. It does not say not-installed. The same word applies the other way: the audio package can be on disk while the loaded driver is still the in-tree one. That is not installed. Installed means the running module is the patched one. Speaker names left behind say not-restarted. Restart means the WirePlumber process, not the machine.
+- Keyboard and sleep say partial* before the boot image is read. The star means that check is waiting on the root password, not that the install is incomplete. Press u. A real mismatch, after the image is read, stays partial with no star.
 - Quitting a player when the WirePlumber warning appears is in time. The check is at the last step. A boot-image rebuild still asks to reboot if that step finds something playing. The warning does not stay on the screen as the result of the rebuild.
 - The audio pin is `37ef61a`. A failed DKMS install is not applied. The boot image is not rebuilt until that confirm succeeds.
 

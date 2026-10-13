@@ -110,7 +110,8 @@ def keyboard_status(probe):
         extra = ""
         if _cmdline_has(probe, TOKEN):
             extra = " The running command line has the token."
-        return Report("partial", err.rstrip(".") + "." + extra, note)
+        status = "partial*" if _pending_password(err) else "partial"
+        return Report(status, err.rstrip(".") + "." + extra, note)
     if present and not in_uki:
         return Report(
             "partial",
@@ -138,6 +139,14 @@ def audio_status(probe):
     unit_ok = probe.user_unit_enabled(JACK_UNIT)
     restart = _restarts_wireplumber(jack or "")
     if dkms_ok and module_ok and jack is not None and unit_ok and not restart:
+        if _module_loaded(probe, "snd_hda_codec_cs420x") and not _out_of_tree(
+            probe, "snd_hda_codec_cs420x"
+        ):
+            return Report(
+                "not-rebooted",
+                "installed, not rebooted. The loaded driver is still the in-tree one. "
+                "A reboot loads the patched driver.",
+            )
         return Report("installed", "macbook81-cs4208/0.1 and mb81-jack-switch")
     if restart:
         return Report(
@@ -193,7 +202,8 @@ def sleep_status(probe):
         extra = ""
         if _cmdline_has(probe, SLEEP_TOKEN):
             extra = " The running command line has the token."
-        return Report("partial", err.rstrip(".") + "." + extra, SLEEP_NOTE)
+        status = "partial*" if _pending_password(err) else "partial"
+        return Report(status, err.rstrip(".") + "." + extra, SLEEP_NOTE)
     if limine or systemd or uki:
         if not limine and not systemd:
             running = _removed_not_rebooted(probe, SLEEP_TOKEN, SLEEP_NOTE)
@@ -294,6 +304,10 @@ def _uki_error(probe):
     return fn() if fn else ""
 
 
+def _pending_password(err):
+    return "not readable" in (err or "")
+
+
 def _cmdline_has(probe, token):
     fn = getattr(probe, "cmdline_has", None)
     return fn(token) if fn else False
@@ -302,6 +316,13 @@ def _cmdline_has(probe, token):
 def _out_of_tree(probe, name):
     fn = getattr(probe, "out_of_tree", None)
     return bool(fn(name)) if fn else False
+
+
+def _module_loaded(probe, name):
+    fn = getattr(probe, "module_loaded", None)
+    if fn:
+        return bool(fn(name))
+    return _out_of_tree(probe, name)
 
 
 def _removed_not_rebooted(probe, token, note):

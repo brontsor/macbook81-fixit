@@ -22,9 +22,16 @@ reboots only if you say yes.
   something playing. Do not leave that warning as the notice for a
   rebuild that already ran.
 - A row whose files are gone, while this boot still has the effect, is
-  not-rebooted. It is not not-installed, and it is not partial. Speaker
-  names left behind are not-restarted. Restart means the WirePlumber
-  process, not the machine.
+  not-rebooted. It is not not-installed, and it is not partial. The same
+  word applies the other way. The audio package on disk, with the loaded
+  module still in-tree, is not-rebooted. `dkms status` and a patch string
+  in the file `modinfo` would load describe the next boot. Installed means
+  the running module is the patched one. Speaker names left behind are
+  not-restarted. Restart means the WirePlumber process, not the machine.
+- Keyboard and sleep say partial* before the boot image is read. The star
+  means that check is waiting on the root password. A mismatch after the
+  image is read stays partial, with no star. Do not treat partial* as an
+  incomplete install.
 - Do not install beside `macbook12-audio`. Do not remove
   `macbook12-spi-driver`.
 - Do not vendor the Apple camera package or the extracted firmware.

@@ -97,6 +97,9 @@ class SystemProbe:
     def out_of_tree(self, name):
         return "O" in _read(f"/sys/module/{name}/taint")
 
+    def module_loaded(self, name):
+        return os.path.isdir(f"/sys/module/{name}")
+
     def forget_boot_image(self):
         if hasattr(self, "_uki_cache"):
             del self._uki_cache

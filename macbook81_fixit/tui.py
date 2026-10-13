@@ -175,6 +175,7 @@ class _App:
             return ""
         return (
             "Keyboard and sleep live in the boot image. "
+            "A star on partial means that check is waiting on the root password. "
             "Press u to authenticate as root and read it. A change there waits for a reboot."
         )
 
@@ -653,7 +654,7 @@ def _pair(number):
 
 
 def _status_color(status):
-    return {"installed": 1, "partial": 2, "blocked": 3, "not-rebooted": 2, "not-restarted": 2}.get(status, 0)
+    return {"installed": 1, "partial": 2, "partial*": 2, "blocked": 3, "not-rebooted": 2, "not-restarted": 2}.get(status, 0)
 
 
 def _banner(stdscr, width, kernel, age):

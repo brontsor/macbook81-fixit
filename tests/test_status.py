@@ -37,6 +37,7 @@ class Fake:
         self.module = ""
         self.cmdline = ""
         self.tainted = set()
+        self.loaded = set()
         self.err = ""
 
     def read(self, path):
@@ -81,12 +82,32 @@ class Fake:
     def out_of_tree(self, name):
         return name in getattr(self, "tainted", set())
 
+    def module_loaded(self, name):
+        return name in getattr(self, "loaded", set()) or name in self.tainted
+
     def uki_error(self):
         return getattr(self, "err", "")
 
 
 class TestKeyboardStatus(unittest.TestCase):
-    def test_dropin_without_uki_token_is_partial(self):
+    def test_an_unread_boot_image_is_partial_star(self):
+        probe = Fake()
+        probe.files[DROPIN] = "token\n"
+        probe.cmdline = TOKEN
+        probe.err = "the boot image is not readable without a password"
+        report = keyboard_status(probe)
+        self.assertEqual(report.status, "partial*")
+        self.assertIn("not readable", report.detail)
+        self.assertIn("running command line", report.detail)
+
+    def test_a_missing_boot_image_stays_partial(self):
+        probe = Fake()
+        probe.files[DROPIN] = "token\n"
+        probe.err = "boot image missing: /boot/EFI/Linux/omarchy_linux-omarchy-bore.efi"
+        report = keyboard_status(probe)
+        self.assertEqual(report.status, "partial")
+
+    def test_a_read_image_without_the_token_stays_partial(self):
         probe = Fake()
         probe.files[DROPIN] = "token\n"
         report = keyboard_status(probe)
@@ -157,6 +178,25 @@ class TestAudioStatus(unittest.TestCase):
         report = audio_status(probe)
         self.assertNotEqual(report.status, "installed")
 
+    def test_a_package_on_disk_with_the_in_tree_driver_loaded_is_not_rebooted(self):
+        probe = _audio_ready()
+        probe.loaded.add("snd_hda_codec_cs420x")
+        report = audio_status(probe)
+        self.assertEqual(report.status, "not-rebooted")
+        self.assertIn("installed, not rebooted", report.detail)
+        self.assertIn("in-tree", report.detail)
+
+    def test_a_package_on_disk_with_the_patched_driver_loaded_is_installed(self):
+        probe = _audio_ready()
+        probe.loaded.add("snd_hda_codec_cs420x")
+        probe.tainted.add("snd_hda_codec_cs420x")
+        report = audio_status(probe)
+        self.assertEqual(report.status, "installed")
+
+    def test_a_package_on_disk_with_nothing_loaded_is_installed(self):
+        report = audio_status(_audio_ready())
+        self.assertEqual(report.status, "installed")
+
     def test_a_loaded_out_of_tree_driver_with_the_files_gone_is_not_rebooted(self):
         probe = Fake()
         probe.tainted.add("snd_hda_codec_cs420x")
@@ -196,6 +236,25 @@ class TestSpeakerStatus(unittest.TestCase):
 
 
 class TestSleepStatus(unittest.TestCase):
+    def test_an_unread_boot_image_is_partial_star(self):
+        probe = Fake()
+        probe.files[SLEEP_LIMINE] = "mem_sleep_default=s2idle\n"
+        probe.files[SLEEP_SYSTEMD] = "[Sleep]\nMemorySleepMode=s2idle\n"
+        probe.cmdline = "mem_sleep_default=s2idle"
+        probe.mem_sleep = "[s2idle] deep"
+        probe.err = "the boot image is not readable without a password"
+        report = sleep_status(probe)
+        self.assertEqual(report.status, "partial*")
+        self.assertIn("running command line", report.detail)
+
+    def test_a_missing_boot_image_stays_partial(self):
+        probe = Fake()
+        probe.files[SLEEP_LIMINE] = "mem_sleep_default=s2idle\n"
+        probe.files[SLEEP_SYSTEMD] = "[Sleep]\nMemorySleepMode=s2idle\n"
+        probe.err = "boot image missing: /boot/EFI/Linux/omarchy_linux-omarchy-bore.efi"
+        report = sleep_status(probe)
+        self.assertEqual(report.status, "partial")
+
     def test_limine_file_alone_is_not_installed(self):
         probe = Fake()
         probe.files[SLEEP_LIMINE] = "mem_sleep_default=s2idle\n"

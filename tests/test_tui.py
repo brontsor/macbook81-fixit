@@ -56,6 +56,11 @@ class TestScreen(unittest.TestCase):
         self.assertIn("Audio driver", line)
         self.assertNotIn("uki", line.lower())
 
+    def test_partial_star_keeps_the_license_column(self):
+        starred = row_text("keyboard", "Keyboard and trackpad", "partial*", False)
+        plain = row_text("speaker", "Speaker profile", "partial", False)
+        self.assertEqual(starred.index("MIT"), plain.index("MIT"))
+
     def test_not_rebooted_and_not_restarted_share_the_license_column(self):
         rebooted = row_text("audio", "Audio driver", "not-rebooted", False)
         restarted = row_text("speaker", "Speaker names", "not-restarted", False)
