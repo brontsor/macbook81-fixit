@@ -136,6 +136,10 @@ This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are
 
 The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
+### Unreleased
+
+- The title shows a version only when this checkout is that release. A local tag is used. If the tag was not fetched, the screen asks the remote which tag points at this commit. A nearer older tag is not the version. A missing answer is unreleased, not 0.1.0.
+
 ### [v0.1.3](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.3)
 
 - The boot image name follows the running kernel package. Stable, Edge, and dev do not share one filename. If that file is missing, the screen reads the file this boot started from.
