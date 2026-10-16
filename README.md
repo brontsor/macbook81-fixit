@@ -1,6 +1,6 @@
 # macbook81-fixit
 
-Patch toolbox for MacBook (Retina, 12-inch, Early 2015) built for Omarchy.
+Patch toolbox for the MacBook8,1 (Retina, 12-inch, Early 2015). Built for Omarchy.
 
 A short history of the machine is in [HISTORY.md](HISTORY.md). The latest changes are at the bottom. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
@@ -143,7 +143,7 @@ The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 ### Unreleased
 
 - The README image is the authenticated screen from 16 October 2026. It shows version 0.1.4. The manufacture date is covered.
-- The opening calls this a patch toolbox built for Omarchy, not an installer running on it. The headphone jack already works. This brings the speakers back after you disconnect.
+- The opening is "Patch toolbox for the MacBook8,1 (Retina, 12-inch, Early 2015). Built for Omarchy." The headphone jack already works. This brings the speakers back after you disconnect.
 
 ### [v0.1.4](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.4)
 
