@@ -21,6 +21,7 @@ from macbook81_fixit.tui import (
     release_stamp,
     wrap_lines,
     rows_to_install,
+    description_lines,
     description_message,
     footer_line,
     status_row,
@@ -354,6 +355,13 @@ class TestScreen(unittest.TestCase):
         self.assertIn("reboot.", " ".join(lines))
         self.assertNotIn("\n", "".join(lines))
 
+    def test_the_selected_title_stays_bold_when_it_wraps(self):
+        drawn = description_lines("Audio driver", ["a later line"], 6)
+        self.assertEqual(drawn[0], ("Audio", True))
+        self.assertEqual(drawn[1], ("driver", True))
+        self.assertTrue(all(not bold for _line, bold in drawn[2:]))
+        self.assertIn("later", " ".join(line for line, _bold in drawn[2:]))
+
     def test_confirm_names_user_steps_and_root_steps(self):
         steps = [
             Step(["git", "clone", "url", "dest"]),
@@ -372,5 +380,6 @@ class TestScreen(unittest.TestCase):
             ("sleep", "Sleep", type("R", (), {"status": "blocked"})()),
             ("webcam", "Webcam", type("R", (), {"status": "partial*"})()),
             ("speaker", "Speaker", type("R", (), {"status": "not-restarted"})()),
+            ("keyboard", "Keyboard", type("R", (), {"status": "not-rebooted"})()),
         ]
         self.assertEqual(rows_to_install(rows), ["audio", "speaker"])

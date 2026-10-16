@@ -46,7 +46,7 @@ The first screen is a scan. Each row is one fix, with a status.
 - `j` and `k`, or the arrow keys, move through the list
 - Space marks a row
 - `a` installs the marked rows
-- `i` installs every row that is not already installed
+- `i` installs every row that is not already installed. It leaves installed, blocked, partial*, and not-rebooted alone
 - `x` removes the marked rows
 - `c` shows the download cache and can purge it. Installed packages stay
 - `u` authenticates as root, then reads the boot image
@@ -144,19 +144,14 @@ This toolbox is MIT. See `LICENSE`. The audio driver and the webcam driver are G
 
 The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
-### Unreleased
+### [v0.1.5](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.5)
 
-- The README image is the authenticated screen from 16 October 2026. It shows version 0.1.4. The manufacture date is covered.
+- The README image is the authenticated screen from 16 October 2026. It shows version 0.1.4. It does not show the wrapped description, install-all, or cache. The manufacture date is covered.
 - The opening is "Patch toolbox for the MacBook8,1 (Retina, 12-inch, Early 2015). Built for Omarchy." The headphone jack already works. This brings the speakers back after you disconnect.
-- A long description wraps. It is not cut at the frame.
+- The clone directory is `macbook81-fixit`. The command uses `macbook81_fixit`. Python cannot import a hyphen.
+- A long description wraps. It is not cut at the frame. The selected title stays bold.
 - Apply names which steps run as you and which need root.
-- `i` installs every row that is not already installed. `c` shows the download cache and can purge it. Installed packages stay.
-- Brightness, volume, keyboard backlight, and media keys are named in the keyboard README.
-
-### [v0.1.4](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.4)
-
-- The title reads the version fixed into this tree, `macbook81_fixit/VERSION`. This release is 0.1.4. The screen does not ask git.
-- The Version column shows a package version number only when that pin commit is the release tag. The webcam pin is 0.7.2. The other pins are commits, not their release tags, so those cells stay the short commit.
+- `i` installs every row that is not already installed. It leaves installed, blocked, partial*, and not-rebooted alone. `c` shows the download cache and can purge the paths just listed. Installed packages stay. A failed purge is reported.
 
 ### For agents
 

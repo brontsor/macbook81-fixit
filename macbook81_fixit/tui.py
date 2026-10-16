@@ -154,16 +154,18 @@ class _App:
             y += 1
         name, title, report = self.rows[self.cursor]
         floor = field if self.auth_line else status_row(height)
-        parts = [title, license_line(name), report.detail, report.note, self._extra(), self._boot_note()]
-        wrapped = []
-        for text in parts:
-            wrapped.extend(wrap_lines(text, span))
+        wrapped = description_lines(
+            title,
+            [license_line(name), report.detail, report.note, self._extra(), self._boot_note()],
+            span,
+        )
         if y < floor and y + 1 + len(wrapped) <= floor:
             y += 1
-        for line in wrapped:
+        for line, bold in wrapped:
             if y >= floor:
                 break
-            self.stdscr.addnstr(y, left, line, span)
+            attr = curses.A_BOLD if bold else 0
+            self.stdscr.addnstr(y, left, line, span, attr)
             y += 1
         status = _status_line(state)
         self.stdscr.addnstr(status_row(height), left, status, span, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
@@ -250,7 +252,14 @@ class _App:
             if answer.strip().lower() != "y":
                 self._notice("cancelled")
                 return
-            purge(self.probe.home())
+            removed, failed = purge(paths)
+            if failed:
+                print("Purge failed.")
+                for line in failed:
+                    print(f"  {line}")
+                self._notice("cache purge failed")
+                input("Press Enter to return.")
+                return
             self._notice("cache purged")
         finally:
             curses.reset_prog_mode()
@@ -493,8 +502,16 @@ def wrap_lines(text, width):
     return lines
 
 
+def description_lines(title, texts, span):
+    titled = [(line, True) for line in wrap_lines(title, span)]
+    body = []
+    for text in texts:
+        body.extend((line, False) for line in wrap_lines(text, span))
+    return titled + body
+
+
 def rows_to_install(rows):
-    skip = {"installed", "blocked", "partial*"}
+    skip = {"installed", "blocked", "partial*", "not-rebooted"}
     wanted = {name for name, _title, report in rows if report.status not in skip}
     return [name for name in ORDER if name in wanted]
 

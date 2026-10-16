@@ -2,6 +2,11 @@
 
 Older releases of macbook81-fixit. The latest changes stay in the README. When a new version is tagged, the previous one moves here. Newest first.
 
+## [v0.1.4](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.4)
+
+- The title reads the version fixed into this tree, `macbook81_fixit/VERSION`. This release is 0.1.4. The screen does not ask git.
+- The Version column shows a package version number only when that pin commit is the release tag. The webcam pin is 0.7.2. The other pins are commits, not their release tags, so those cells stay the short commit.
+
 ## [v0.1.3](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.3)
 
 - The boot image name follows the running kernel package. Stable, Edge, and dev do not share one filename. If that file is missing, the screen reads the file this boot started from.
