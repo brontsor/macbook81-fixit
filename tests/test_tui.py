@@ -19,8 +19,6 @@ from macbook81_fixit.tui import (
     row_text,
     title_line,
     release_stamp,
-    version_from_git,
-    _read_git_stamp,
     description_message,
     footer_line,
     status_row,
@@ -101,63 +99,6 @@ class TestScreen(unittest.TestCase):
         self.assertEqual(version, "unreleased")
         self.assertNotEqual(version, "0.1.0")
         self.assertEqual(built, "6 October 2026, 17:32 CDT")
-
-    def test_a_checkout_pinned_to_a_tag_shows_that_tag(self):
-        self.assertEqual(version_from_git("v0.1.3\n", "", "1b33aec"), "v0.1.3")
-
-    def test_a_remote_tag_on_this_commit_is_the_version_when_the_local_tag_is_absent(self):
-        remote = (
-            "c4dce57d602effe41d3bc2d15f308d56b1bcc50b\trefs/tags/v0.1.3\n"
-            "1b33aec7c4822daace755edfcfa16eb543c81c86\trefs/tags/v0.1.3^{}\n"
-        )
-        found = version_from_git("", remote, "1b33aec7c4822daace755edfcfa16eb543c81c86\n")
-        self.assertEqual(found, "v0.1.3")
-
-    def test_an_older_tag_that_does_not_point_here_is_not_the_version(self):
-        remote = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\trefs/tags/v0.1.2^{}\n"
-        self.assertEqual(
-            version_from_git("", remote, "1b33aec7c4822daace755edfcfa16eb543c81c86"),
-            "",
-        )
-
-    def test_the_title_asks_whether_this_commit_is_the_tag(self):
-        calls = []
-
-        def run(args):
-            calls.append(args)
-            if args[:4] == ["git", "describe", "--exact-match", "--tags"]:
-                return "v0.1.3\n"
-            if args[:3] == ["git", "log", "-1"]:
-                return "2026-10-12 18:00:00 -0500\n"
-            return ""
-
-        version, _built = release_stamp(lambda: _read_git_stamp(run))
-        self.assertEqual(version, "0.1.3")
-        self.assertNotIn(["git", "describe", "--tags", "--abbrev=0"], calls)
-        self.assertIn(["git", "describe", "--exact-match", "--tags"], calls)
-        self.assertFalse(any("ls-remote" in args for args in calls))
-
-    def test_a_missing_local_tag_uses_the_remote_tag_on_this_commit(self):
-        calls = []
-
-        def run(args):
-            calls.append(args)
-            if "--exact-match" in args:
-                return ""
-            if args[:2] == ["git", "rev-parse"]:
-                return "1b33aec7c4822daace755edfcfa16eb543c81c86\n"
-            if "ls-remote" in args:
-                return (
-                    "1b33aec7c4822daace755edfcfa16eb543c81c86\trefs/tags/v0.1.3^{}\n"
-                )
-            if args[:3] == ["git", "log", "-1"]:
-                return "2026-10-12 18:00:00 -0500\n"
-            return ""
-
-        version, _built = release_stamp(lambda: _read_git_stamp(run))
-        self.assertEqual(version, "0.1.3")
-        self.assertTrue(any("ls-remote" in args for args in calls))
-        self.assertNotIn(["git", "describe", "--tags", "--abbrev=0"], calls)
 
     def test_the_description_does_not_repeat_root_authentication(self):
         self.assertEqual(description_message("authenticated as root"), "")

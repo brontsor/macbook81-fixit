@@ -46,3 +46,15 @@ SHORT = {
     "speaker": "10794e1",
     "webcam": "0.7.2",
 }
+
+# Set only when PIN is that release tag. A tag on another commit is not this pin.
+RELEASE = {
+    "webcam": "0.7.2",
+}
+
+
+def package_version(name):
+    number = RELEASE.get(name, "").strip().lstrip("v")
+    if number:
+        return number
+    return SHORT[name]

@@ -44,7 +44,7 @@ def format_check(probe):
     lines.append("dependencies: " + ("ok" if not absent else "missing " + ", ".join(absent)))
     lines.append("")
     for key, title, report in scan(probe):
-        lines.append(f"{title:<24} {report.status:<14} {catalog.SHORT[key]}")
+        lines.append(f"{title:<24} {report.status:<14} {catalog.package_version(key)}")
         if report.detail:
             lines.append(f"  {report.detail}")
         if report.note:

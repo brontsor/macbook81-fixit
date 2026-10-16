@@ -12,6 +12,7 @@ from macbook81_fixit.firmware import state as firmware_state
 from macbook81_fixit.plan import plan_apply, plan_remove
 from macbook81_fixit.run import live_run
 from macbook81_fixit.status import scan
+from macbook81_fixit.version import read_version
 
 ORDER = ("keyboard", "audio", "speaker", "sleep", "webcam")
 TOKEN = "initcall_blacklist=dw_pci_driver_init"
@@ -404,7 +405,7 @@ STATUS_WIDTH = 13
 def row_text(name, title, status, marked):
     mark = "[x]" if marked else "[ ]"
     license_name = catalog.LICENSE.get(name, ("", ""))[0]
-    return f"{mark} {title:<22} {status:<{STATUS_WIDTH}} {license_name:<18} {catalog.SHORT[name]}"
+    return f"{mark} {title:<22} {status:<{STATUS_WIDTH}} {license_name:<18} {catalog.package_version(name)}"
 
 
 def needs_reboot(steps):
@@ -470,7 +471,7 @@ def release_stamp(read=None):
     if read is None and _STAMP is not None:
         return _STAMP
     if read is None:
-        read = _read_git_stamp
+        read = read_build_stamp
     version, built = read()
     version = version.strip().lstrip("v") or "unreleased"
     text = built.strip()
@@ -483,44 +484,12 @@ def release_stamp(read=None):
         if zone:
             stamp = f"{stamp} {zone}"
         stamped = (version, stamp)
-    if read is _read_git_stamp:
+    if read is read_build_stamp:
         _STAMP = stamped
     return stamped
 
 
-def version_from_git(exact, remote, head):
-    pinned = exact.strip()
-    if pinned:
-        return pinned.splitlines()[0].strip()
-    commit = head.strip()
-    if not commit:
-        return ""
-    names = []
-    for line in remote.splitlines():
-        sha, sep, ref = line.partition("\t")
-        if not sep or sha.strip() != commit:
-            continue
-        name = ref.strip()
-        if name.endswith("^{}"):
-            name = name[:-3]
-        if name.startswith("refs/tags/"):
-            names.append(name[len("refs/tags/"):])
-    if not names:
-        return ""
-    return max(names, key=_tag_sort)
-
-
-def _tag_sort(name):
-    text = name[1:] if name.startswith("v") else name
-    parts = []
-    for piece in text.split("."):
-        if not piece.isdigit():
-            return (0, name)
-        parts.append(int(piece))
-    return (1, tuple(parts))
-
-
-def _read_git_stamp(run=None):
+def read_build_stamp(run=None, version_text=None):
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     def one(args):
@@ -536,16 +505,11 @@ def _read_git_stamp(run=None):
             return ""
         return result.stdout
 
-    exact = one(["git", "describe", "--exact-match", "--tags"])
-    remote = ""
-    head = ""
-    if not exact.strip():
-        head = one(["git", "rev-parse", "HEAD"])
-        remote = one(["git", "ls-remote", "--tags", "origin"])
-    return (
-        version_from_git(exact, remote, head),
-        one(["git", "log", "-1", "--format=%ci"]),
-    )
+    if version_text is None:
+        version = read_version()
+    else:
+        version = version_text.strip().lstrip("v")
+    return version, one(["git", "log", "-1", "--format=%ci"])
 
 
 def banner_lines(kernel, age, version=None, built=None):
