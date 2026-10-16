@@ -136,11 +136,14 @@ This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are
 
 The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
+### Unreleased
+
+- The README image is the authenticated screen from 16 October 2026. It shows version 0.1.4. The manufacture date is covered.
+
 ### [v0.1.4](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.4)
 
 - The title reads the version fixed into this tree, `macbook81_fixit/VERSION`. This release is 0.1.4. The screen does not ask git.
 - The Version column shows a package version number only when that pin commit is the release tag. The webcam pin is 0.7.2. The other pins are commits, not their release tags, so those cells stay the short commit.
-- The README image is still the previous authenticated screen. It does not show this version line. The manufacture date is covered.
 
 ### For agents
 
