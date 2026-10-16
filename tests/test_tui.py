@@ -19,6 +19,8 @@ from macbook81_fixit.tui import (
     row_text,
     title_line,
     release_stamp,
+    wrap_lines,
+    rows_to_install,
     description_message,
     footer_line,
     status_row,
@@ -337,3 +339,38 @@ class TestScreen(unittest.TestCase):
         lines = confirm_lines([step])
         self.assertIn("in time", lines[1])
         self.assertIn("restart", lines[0])
+        self.assertTrue(lines[0].startswith("you: "))
+
+    def test_a_long_description_wraps_instead_of_being_cut(self):
+        text = (
+            "Keyboard and sleep live in the boot image. "
+            "A star on partial means that check is waiting on the root password. "
+            "Press u to authenticate as root and read it. "
+            "A change there waits for a reboot."
+        )
+        lines = wrap_lines(text, 40)
+        self.assertGreater(len(lines), 1)
+        self.assertTrue(all(len(line) <= 40 for line in lines))
+        self.assertIn("reboot.", " ".join(lines))
+        self.assertNotIn("\n", "".join(lines))
+
+    def test_confirm_names_user_steps_and_root_steps(self):
+        steps = [
+            Step(["git", "clone", "url", "dest"]),
+            Step(["install", "-D", "file", "/etc/drop-in"], sudo=True),
+        ]
+        lines = confirm_lines(steps)
+        self.assertTrue(lines[0].startswith("you: "))
+        self.assertIn("git clone", lines[0])
+        self.assertTrue(lines[1].startswith("root: "))
+        self.assertIn("install -D", lines[1])
+
+    def test_install_all_skips_a_row_that_is_already_installed(self):
+        rows = [
+            ("keyboard", "Keyboard", type("R", (), {"status": "installed"})()),
+            ("audio", "Audio", type("R", (), {"status": "not-installed"})()),
+            ("sleep", "Sleep", type("R", (), {"status": "blocked"})()),
+            ("webcam", "Webcam", type("R", (), {"status": "partial*"})()),
+            ("speaker", "Speaker", type("R", (), {"status": "not-restarted"})()),
+        ]
+        self.assertEqual(rows_to_install(rows), ["audio", "speaker"])

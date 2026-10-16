@@ -35,6 +35,8 @@ To see what is already in place, and change nothing:
 python3 -m macbook81_fixit --check
 ```
 
+The clone directory is `macbook81-fixit`. The command uses `macbook81_fixit`. Python cannot import a hyphen, so the module keeps the underscore. That split stays.
+
 ## The screen
 
 The first screen is a scan. Each row is one fix, with a status.
@@ -44,7 +46,9 @@ The first screen is a scan. Each row is one fix, with a status.
 - `j` and `k`, or the arrow keys, move through the list
 - Space marks a row
 - `a` installs the marked rows
+- `i` installs every row that is not already installed
 - `x` removes the marked rows
+- `c` shows the download cache and can purge it. Installed packages stay
 - `u` authenticates as root, then reads the boot image
 - `q` quits
 
@@ -144,6 +148,10 @@ The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
 - The README image is the authenticated screen from 16 October 2026. It shows version 0.1.4. The manufacture date is covered.
 - The opening is "Patch toolbox for the MacBook8,1 (Retina, 12-inch, Early 2015). Built for Omarchy." The headphone jack already works. This brings the speakers back after you disconnect.
+- A long description wraps. It is not cut at the frame.
+- Apply names which steps run as you and which need root.
+- `i` installs every row that is not already installed. `c` shows the download cache and can purge it. Installed packages stay.
+- Brightness, volume, keyboard backlight, and media keys are named in the keyboard README.
 
 ### [v0.1.4](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.4)
 

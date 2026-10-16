@@ -19,7 +19,7 @@ TOKEN = "initcall_blacklist=dw_pci_driver_init"
 SLEEP_TOKEN = "mem_sleep_default=s2idle"
 
 HELP = (
-    "j/k move   space mark   a apply   x remove   s scan   q quit",
+    "j/k move  space mark  a apply  i all  x remove  s scan  c cache  q quit",
     "u authenticates as root, then reads the boot image. That is the file this machine starts from.",
 )
 
@@ -104,8 +104,12 @@ class _App:
                     self.marked.add(name)
             elif key in (ord("a"), ord("A")):
                 self._act("apply")
+            elif key in (ord("i"), ord("I")):
+                self._install_all()
             elif key in (ord("x"), ord("X")):
                 self._act("remove")
+            elif key in (ord("c"), ord("C")):
+                self._purge_cache()
             elif key in (ord("u"), ord("U")):
                 self._read_boot_image()
             elif key in (ord("s"), ord("S")):
@@ -148,16 +152,18 @@ class _App:
                 attr |= curses.A_REVERSE
             self.stdscr.addnstr(y, left, line, span, attr)
             y += 1
-        y += 1
         name, title, report = self.rows[self.cursor]
-        floor = field
-        if y < floor:
-            self.stdscr.addnstr(y, left, title, span, curses.A_BOLD)
+        floor = field if self.auth_line else status_row(height)
+        parts = [title, license_line(name), report.detail, report.note, self._extra(), self._boot_note()]
+        wrapped = []
+        for text in parts:
+            wrapped.extend(wrap_lines(text, span))
+        if y < floor and y + 1 + len(wrapped) <= floor:
             y += 1
-        for text in (license_line(name), report.detail, report.note, self._extra(), self._boot_note()):
-            if not text or y >= floor:
+        for line in wrapped:
+            if y >= floor:
                 break
-            self.stdscr.addnstr(y, left, text, span)
+            self.stdscr.addnstr(y, left, line, span)
             y += 1
         status = _status_line(state)
         self.stdscr.addnstr(status_row(height), left, status, span, _pair(_COLOR[frame_style(state)[1]]) | curses.A_BOLD)
@@ -216,6 +222,39 @@ class _App:
             curses.reset_prog_mode()
         self.rescan()
         self.marked.clear()
+
+    def _install_all(self):
+        names = rows_to_install(self.rows)
+        if not names:
+            self._notice("nothing to install")
+            return
+        self.marked = set(names)
+        self._act("apply")
+
+    def _purge_cache(self):
+        from macbook81_fixit.cache import listing, purge
+
+        text, paths = listing(self.probe.home())
+        curses.def_prog_mode()
+        curses.endwin()
+        try:
+            print()
+            print("Cache: " + text)
+            for path in paths:
+                print(f"  {path}")
+            if not paths:
+                self._notice("nothing cached")
+                input("Press Enter to return.")
+                return
+            answer = input("Purge this cache? Installed packages stay. [y/N] ")
+            if answer.strip().lower() != "y":
+                self._notice("cancelled")
+                return
+            purge(self.probe.home())
+            self._notice("cache purged")
+        finally:
+            curses.reset_prog_mode()
+        self.rescan()
 
     def _confirm_and_run(self, mode, names, steps):
         print()
@@ -415,10 +454,49 @@ def needs_reboot(steps):
 def confirm_lines(steps):
     lines = []
     for step in steps:
-        lines.append(" ".join(step.argv) or step.detail)
+        what = " ".join(step.argv) or step.detail
+        if step.kind == "skip":
+            lines.append(what)
+            continue
+        who = "root" if step.sudo else "you"
+        lines.append(f"{who}: {what}")
         if step.kind == "wireplumber" and step.detail:
             lines.append(step.detail)
     return lines
+
+
+def wrap_lines(text, width):
+    if not text:
+        return []
+    if width <= 0:
+        return [text]
+    lines = []
+    current = ""
+    for word in text.split():
+        while width > 0 and len(word) > width:
+            if current:
+                lines.append(current)
+                current = ""
+            lines.append(word[:width])
+            word = word[width:]
+        if not word:
+            continue
+        if not current:
+            current = word
+        elif len(current) + 1 + len(word) <= width:
+            current = f"{current} {word}"
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
+def rows_to_install(rows):
+    skip = {"installed", "blocked", "partial*"}
+    wanted = {name for name, _title, report in rows if report.status not in skip}
+    return [name for name in ORDER if name in wanted]
 
 
 def after_run(result):
