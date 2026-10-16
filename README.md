@@ -1,19 +1,24 @@
 # macbook81-fixit
 
-Installer for a MacBook (Retina, 12-inch, Early 2015) running Omarchy.
+Patch toolbox for MacBook (Retina, 12-inch, Early 2015) built for Omarchy.
 
 A short history of the machine is in [HISTORY.md](HISTORY.md). The latest changes are at the bottom. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 
-A fresh Omarchy install on this model leaves the following broken. This program does the following about each.
+Bring your own keyboard and mouse for the Omarchy install and the first boot. BTOKAM. The built-in ones are why you are here, and they are not there yet.
 
-- The built-in keyboard and trackpad time out. The SPI controller accepts a transfer and never finishes it. This installs `initcall_blacklist=dw_pci_driver_init`, so that controller uses PIO. It does not install the hibernate hooks or the suspend detach hook from the write-up that names that token.
-- The internal speakers are silent. The audio chip is visible, and the stock driver does not play them. This installs the speaker driver.
-- The headphones and the microphone are both named "CS4208 Analog". This names them Headphones, Internal Microphone, and Speaker (Raw), and adds the equalizer used with the speakers. Those coefficients were not measured here.
-- Nothing moves playback when the headphone jack changes. This installs that switch with the speaker driver. You do not pick the output from a menu.
-- A normal suspend uses deep sleep. That can resume with a dead keyboard until the next reboot. This makes light sleep the default. It does not fix deep sleep, and it does not install hibernate.
-- The FaceTime camera is not a USB webcam, so there is no picture. This installs patjak's driver and downloads the firmware from Apple. The firmware is not in this repository.
-- Bluetooth has no controller. This program does not install one.
-- Wi-Fi comes up. This program does not change it.
+A fresh Omarchy install on this model leaves these broken. This toolbox does the following about each.
+
+| Issue | Our solution |
+|---|---|
+| The built-in keyboard and trackpad time out. The SPI controller accepts a transfer and never finishes it. | This installs `initcall_blacklist=dw_pci_driver_init`, so that controller uses PIO. It does not install the hibernate hooks or the suspend detach hook from the write-up that names that token. |
+| The internal speakers are silent. The audio chip is visible, and the stock driver does not play them. | This installs the speaker driver. |
+| The headphone jack does not work. | The jack works. Plugging in plays through the headphones. |
+| Nothing moves playback when the headphone jack changes. | This installs that switch with the speaker driver. You do not pick the output from a menu. The switch is not the fix. The jack working is. |
+| The headphones and the microphone are both named "CS4208 Analog". | This names them Headphones, Internal Microphone, and Speaker (Raw), and adds the equalizer used with the speakers. Those coefficients were not measured here. |
+| A normal suspend uses deep sleep. That can resume with a dead keyboard until the next reboot. | This makes light sleep the default. It does not fix deep sleep, and it does not install hibernate. |
+| The FaceTime camera is not a USB webcam, so there is no picture. | This installs patjak's driver and downloads the firmware from Apple. The firmware is not in this repository. |
+| Bluetooth has no controller. | This program does not install one. |
+| Wi-Fi comes up. | This program does not change it. |
 
 You run it as yourself, not as root. It asks for your password when a step needs one. It reboots only if you say yes.
 
@@ -62,7 +67,7 @@ On a stock boot the built-in keyboard and trackpad time out. This installs the p
 
 ### Speakers and headphones
 
-Stock Linux sees the audio chip and does not play the internal speakers. This installs our fork of [omnidecker/macbook8.1-speaker-driver](https://github.com/omnidecker/macbook8.1-speaker-driver) at `e4134fb`, itself a fork of [thomas-shirley/macbook8.1-speaker-driver](https://github.com/thomas-shirley/macbook8.1-speaker-driver). That tree credits davidjo and leifliddy. Plugging or unplugging headphones moves whatever is playing. You do not have to pick the output from a menu. That jack move is ours.
+Stock Linux sees the audio chip and does not play the internal speakers. This installs our fork of [omnidecker/macbook8.1-speaker-driver](https://github.com/omnidecker/macbook8.1-speaker-driver) at `e4134fb`, itself a fork of [thomas-shirley/macbook8.1-speaker-driver](https://github.com/thomas-shirley/macbook8.1-speaker-driver). That tree credits davidjo and leifliddy. The headphone jack works. Plugging in plays through the headphones. Plugging or unplugging also moves whatever is already playing. You do not have to pick the output from a menu. That move is not the fix. The jack working is.
 
 [macbook81-cs4208](https://github.com/brontsor/macbook81-cs4208)
 
@@ -130,7 +135,7 @@ Each fix is pinned to a reviewed commit. The program does not follow a branch ti
 
 ### License
 
-This installer is MIT. See `LICENSE`. The audio driver and the webcam driver are GPL. The selected row shows that row's license and the link.
+This toolbox is MIT. See `LICENSE`. The audio driver and the webcam driver are GPL. The selected row shows that row's license and the link.
 
 ## Changes
 
@@ -139,6 +144,7 @@ The latest only. Older releases are in [CHANGELOG.md](CHANGELOG.md).
 ### Unreleased
 
 - The README image is the authenticated screen from 16 October 2026. It shows version 0.1.4. The manufacture date is covered.
+- The opening calls this a patch toolbox built for Omarchy, not an installer running on it. The jack working is the headphone fix. The switch is not.
 
 ### [v0.1.4](https://github.com/brontsor/macbook81-fixit/releases/tag/v0.1.4)
 
